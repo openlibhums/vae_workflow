@@ -1,0 +1,25 @@
+{% load i18n %}
+<div class="kanban-card">
+    <div class="kanban-card-title">
+        <a href="{% url 'vae_article' article.pk %}">{{ article.safe_title }}</a>
+    </div>
+    <div class="kanban-card-meta">
+        {% if article.section %}<span>{{ article.section.name }}</span>{% endif %}
+        <span>{{ article.date_submitted|date:"j F Y" }}</span>
+    </div>
+    <div class="kanban-card-claims">
+        {% with pending=article.vae_claims.all %}
+        {% if pending %}
+            {% for claim in pending %}
+                {% if claim.status == 'pending' or claim.status == 'confirmed' %}
+                <span class="label {% if claim.status == 'confirmed' %}success{% else %}secondary{% endif %}">
+                    {{ claim.claimed_by.full_name }}
+                </span>
+                {% endif %}
+            {% endfor %}
+        {% else %}
+            <span class="label">Unclaimed</span>
+        {% endif %}
+        {% endwith %}
+    </div>
+</div>

@@ -1,0 +1,92 @@
+[
+  {
+    "group": {
+      "name": "plugin:vae_workflow"
+    },
+    "setting": {
+      "name": "allow_multiple_claims",
+      "pretty_name": "Allow Multiple Claims",
+      "description": "When enabled, multiple VAEs may claim the same article simultaneously. The handling editor then selects one to confirm. When disabled, only one VAE may claim an article at a time.",
+      "type": "boolean",
+      "is_translatable": false
+    },
+    "value": {
+      "default": false
+    }
+  },
+  {
+    "group": {
+      "name": "plugin:vae_workflow"
+    },
+    "setting": {
+      "name": "vae_claim_notification",
+      "pretty_name": "New Claim Notification (to editors)",
+      "description": "Email sent to journal editors when a VAE claims an article.",
+      "type": "rich-text",
+      "is_translatable": true
+    },
+    "value": {
+      "default": "<p>Dear Editor,</p><p>{{ claim.claimed_by.full_name }} has claimed article #{{ claim.article.pk }}: <em>{{ claim.article.title }}</em>.</p>{% if claim.notes %}<p>Notes from the VAE: {{ claim.notes }}</p>{% endif %}<p>Review and confirm claims: <a href=\"{% journal_url 'vae_article' claim.article.pk %}\">{% journal_url 'vae_article' claim.article.pk %}</a></p><p>Regards,<br />{{ request.journal.name }}</p>"
+    }
+  },
+  {
+    "group": {
+      "name": "plugin:vae_workflow"
+    },
+    "setting": {
+      "name": "vae_withdrawn_notification",
+      "pretty_name": "Claim Withdrawn Notification (to editors)",
+      "description": "Email sent to journal editors when a VAE withdraws their claim.",
+      "type": "rich-text",
+      "is_translatable": true
+    },
+    "value": {
+      "default": "<p>Dear Editor,</p><p>{{ claim.claimed_by.full_name }} has withdrawn their claim on article #{{ claim.article.pk }}: <em>{{ claim.article.title }}</em>.</p><p>Review remaining claims: <a href=\"{% journal_url 'vae_article' claim.article.pk %}\">{% journal_url 'vae_article' claim.article.pk %}</a></p><p>Regards,<br />{{ request.journal.name }}</p>"
+    }
+  },
+  {
+    "group": {
+      "name": "plugin:vae_workflow"
+    },
+    "setting": {
+      "name": "vae_confirmed_notification",
+      "pretty_name": "Claim Confirmed Notification (to VAE)",
+      "description": "Email sent to the VAE when their claim is confirmed by an editor.",
+      "type": "rich-text",
+      "is_translatable": true
+    },
+    "value": {
+      "default": "<p>Dear {{ claim.claimed_by.full_name }},</p><p>Your claim on article #{{ claim.article.pk }}: <em>{{ claim.article.title }}</em> has been confirmed. You have been assigned as section editor for this article.</p><p>Regards,<br />{{ request.journal.name }}</p>"
+    }
+  },
+  {
+    "group": {
+      "name": "plugin:vae_workflow"
+    },
+    "setting": {
+      "name": "vae_new_article_notification",
+      "pretty_name": "New Article Notification (to VAEs)",
+      "description": "Email sent to all VAEs in the pool when a new article is available for claiming.",
+      "type": "rich-text",
+      "is_translatable": true
+    },
+    "value": {
+      "default": "<p>Dear {{ recipient.full_name }},</p><p>A new preprint is available for claiming as Handling Editor: <em>{{ article.title }}</em>.</p><p>View and claim the article: <a href=\"{% journal_url 'vae_article' article.pk %}\">{% journal_url 'vae_article' article.pk %}</a></p><p>Regards,<br />{{ request.journal.name }}</p>"
+    }
+  },
+  {
+    "group": {
+      "name": "plugin:vae_workflow"
+    },
+    "setting": {
+      "name": "vae_rejected_notification",
+      "pretty_name": "Claim Rejected Notification (to VAE)",
+      "description": "Email sent to the VAE when their claim is rejected by an editor.",
+      "type": "rich-text",
+      "is_translatable": true
+    },
+    "value": {
+      "default": "<p>Dear {{ claim.claimed_by.full_name }},</p><p>Your claim on article #{{ claim.article.pk }}: <em>{{ claim.article.title }}</em> has not been taken forward at this time.</p><p>Regards,<br />{{ request.journal.name }}</p>"
+    }
+  }
+]

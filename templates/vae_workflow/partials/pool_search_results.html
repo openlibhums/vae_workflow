@@ -1,0 +1,38 @@
+<div id="pool-search-results">
+    {% if query %}
+        {% if results %}
+        <table class="vae-search-results-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for account in results %}
+                <tr>
+                    <td>{{ account.full_name }}</td>
+                    <td style="color:#888;">{{ account.email }}</td>
+                    <td>
+                        <form
+                            hx-post="{% url 'vae_pool_add' %}"
+                            hx-target="#pool-table"
+                            hx-swap="outerHTML"
+                        >
+                            {% csrf_token %}
+                            <input type="hidden" name="account_id" value="{{ account.pk }}">
+                            <button class="button small success" type="submit">
+                                <span class="fa fa-plus"></span> Add
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="vae-no-results"><span class="fa fa-search"></span> No section editors found matching &ldquo;{{ query }}&rdquo;.</p>
+        {% endif %}
+    {% endif %}
+</div>

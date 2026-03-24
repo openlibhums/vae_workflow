@@ -1,0 +1,79 @@
+{% extends "admin/core/base.html" %}
+{% load foundation static %}
+
+{% block css %}{{ block.super }}<link rel="stylesheet" href="{% static 'admin/css/vae_workflow.css' %}">{% endblock %}
+
+{% block title %}VAE Workflow{% endblock %}
+{% block title-section %}VAE Workflow{% endblock %}
+{% block title-sub %}Manage the Volunteer Associate Editor pool and settings{% endblock %}
+
+{% block body %}
+<div class="row expanded">
+
+  {# ── Left: Pool ── #}
+  <div class="large-7 columns">
+    <div class="box">
+      <div class="title-area"><h2>VAE Pool</h2></div>
+      <div class="content">
+        <p>Section editors in the pool can browse and self-claim articles when they enter the VAE Workflow stage.</p>
+
+        {% include "vae_workflow/partials/pool_table.html" %}
+
+        <div class="title-area" style="margin-top:1.5rem;"><h3>Add a VAE</h3></div>
+        <form
+          hx-get="{% url 'vae_pool_search' %}"
+          hx-target="#pool-search-results"
+          hx-swap="outerHTML"
+          hx-indicator="#pool-search-spinner"
+        >
+          <div class="vae-search-wrap">
+            <input type="text" name="q" placeholder="Search by name or email&hellip;" autocomplete="off">
+            <button type="submit" class="button">
+              <span class="fa fa-search"></span> Search
+              <i id="pool-search-spinner" class="fa fa-circle-o-notch fa-spin" style="display:none;" aria-hidden="true"></i>
+            </button>
+          </div>
+        </form>
+        <div id="pool-search-results"></div>
+
+      </div>
+    </div>
+  </div>
+
+  {# ── Right: About ── #}
+  <div class="large-5 columns">
+    <div class="box">
+      <div class="title-area"><h2>How It Works</h2></div>
+      <div class="content">
+        <ol class="vae-how-list">
+          <li>
+            <span class="step-num">1</span>
+            <span>Add section editors to the VAE pool using the search on the left.</span>
+          </li>
+          <li>
+            <span class="step-num">2</span>
+            <span>When an article enters the <strong>VAE Claiming</strong> stage, pool members can browse and claim articles they wish to handle.</span>
+          </li>
+          <li>
+            <span class="step-num">3</span>
+            <span>The handling editor reviews all claims, confirms one, and the VAE is assigned as section editor.</span>
+          </li>
+          <li>
+            <span class="step-num">4</span>
+            <span>On revision, the article is fast-tracked back to the same VAE.</span>
+          </li>
+        </ol>
+        <a href="{% url 'vae_articles' %}" class="button expanded">
+          <span class="fa fa-list"></span> View Articles Awaiting a VAE
+        </a>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block js %}
+{{ block.super }}
+<script src="https://unpkg.com/htmx.org@1.9.12"></script>
+{% endblock %}

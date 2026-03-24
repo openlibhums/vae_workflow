@@ -1,0 +1,39 @@
+<div id="pool-table">
+    {% if pool_members %}
+    <table class="vae-pool-table">
+        <thead>
+            <tr>
+                <th>Member</th>
+                <th>Added</th>
+                <th>Added By</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for member in pool_members %}
+            <tr>
+                <td>
+                    <div class="member-name">{{ member.account.full_name }}</div>
+                    <div class="member-email">{{ member.account.email }}</div>
+                </td>
+                <td class="member-meta">{{ member.added|date:"j M Y" }}</td>
+                <td class="member-meta">{% if member.added_by %}{{ member.added_by.full_name }}{% else %}—{% endif %}</td>
+                <td>
+                    <form method="POST">
+                        {% csrf_token %}
+                        <button class="button small alert" name="remove_member" value="{{ member.pk }}">
+                            <span class="fa fa-times"></span> Remove
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="vae-empty-pool">
+        <span class="fa fa-users"></span>
+        No VAEs in the pool yet.
+    </div>
+    {% endif %}
+</div>

@@ -1,0 +1,273 @@
+/* ============================================================
+   VAE Workflow plugin styles
+   ============================================================ */
+
+/* ── Pool banner (articles list) ── */
+.vae-pool-banner {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .875rem 1.25rem;
+  background: #eaf4fb;
+  border-left: 4px solid #2199e8;
+  border-radius: 2px;
+  margin-bottom: 1.5rem;
+  font-size: .9rem;
+}
+.vae-pool-banner .fa { font-size: 1.1rem; color: #2199e8; flex-shrink: 0; }
+
+/* ── Articles list table ── */
+.vae-articles-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.vae-articles-table thead th {
+  padding: .6rem 1rem;
+  text-align: left;
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #666;
+  border-bottom: 2px solid #e0e0e0;
+  white-space: nowrap;
+}
+.vae-articles-table tbody tr { border-bottom: 1px solid #f0f0f0; transition: background .1s; }
+.vae-articles-table tbody tr:hover { background: #fafafa; }
+.vae-articles-table tbody td { padding: .85rem 1rem; vertical-align: middle; }
+.vae-articles-table tbody td:first-child { color: #999; font-size: .8rem; font-variant-numeric: tabular-nums; }
+.vae-articles-table .article-title a {
+  font-weight: 600;
+  color: #1a1a1a;
+  text-decoration: none;
+  line-height: 1.4;
+}
+.vae-articles-table .article-title a:hover { color: #2199e8; }
+.vae-articles-table .article-meta { font-size: .8rem; color: #888; margin-top: .2rem; }
+
+/* ── Stage badges ── */
+.stage-badge {
+  display: inline-block;
+  padding: .2rem .55rem;
+  border-radius: 2px;
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.stage-badge-claiming  { background: #e3f0ff; color: #1a6bbf; }
+.stage-badge-review    { background: #e8f5e9; color: #2e7d32; }
+.stage-badge-revision  { background: #fff8e1; color: #c67c00; }
+.stage-badge-assigned  { background: #f3e5f5; color: #7b1fa2; }
+.stage-badge-default   { background: #f5f5f5; color: #555; }
+
+/* ── Claim labels (articles list) ── */
+.claim-label {
+  display: inline-block;
+  padding: .2rem .55rem;
+  border-radius: 2px;
+  font-size: .75rem;
+  font-weight: 600;
+  margin: .15rem .15rem .15rem 0;
+  white-space: nowrap;
+}
+.claim-label-none      { background: #f5f5f5; color: #999; }
+.claim-label-pending   { background: #e8f4fd; color: #1a6bbf; }
+.claim-label-confirmed { background: #e8f5e9; color: #2e7d32; }
+.claim-label-rejected  { background: #fdecea; color: #c62828; }
+
+/* ── Empty state ── */
+.vae-empty-state {
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: #aaa;
+}
+.vae-empty-state .fa { font-size: 2.5rem; display: block; margin-bottom: .75rem; color: #ddd; }
+
+/* ── Article detail: metadata table ── */
+.vae-meta-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.vae-meta-table th {
+  width: 30%;
+  padding: .6rem .75rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: .8rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  border-bottom: 1px solid #f0f0f0;
+  vertical-align: top;
+}
+.vae-meta-table td {
+  padding: .6rem .75rem;
+  border-bottom: 1px solid #f0f0f0;
+  line-height: 1.5;
+  color: #222;
+}
+
+/* ── Assigned editor banner ── */
+.vae-assigned-banner {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: 1rem 1.25rem;
+  background: #e8f5e9;
+  border-left: 4px solid #43a047;
+  border-radius: 2px;
+  margin-bottom: 1rem;
+}
+.vae-assigned-banner .fa { color: #43a047; font-size: 1.2rem; flex-shrink: 0; }
+.vae-assigned-banner strong { color: #1b5e20; }
+.vae-assigned-banner .revision-note { font-size: .8rem; color: #555; margin-top: .2rem; }
+
+/* ── Claim status panel ── */
+.vae-claim-status {
+  border-radius: 3px;
+  padding: .9rem 1.1rem;
+  margin-bottom: 1rem;
+  font-size: .9rem;
+  line-height: 1.5;
+}
+.vae-claim-status.is-confirmed { background: #e8f5e9; border-left: 4px solid #43a047; }
+.vae-claim-status.is-pending   { background: #e3f2fd; border-left: 4px solid #2196f3; }
+.vae-claim-status.is-other     { background: #fff8e1; border-left: 4px solid #ffa000; }
+.vae-claim-status .claim-status-label {
+  font-weight: 700;
+  font-size: .8rem;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  display: block;
+  margin-bottom: .3rem;
+}
+.vae-claim-status.is-confirmed .claim-status-label { color: #2e7d32; }
+.vae-claim-status.is-pending   .claim-status-label { color: #1565c0; }
+.vae-claim-status.is-other     .claim-status-label { color: #e65100; }
+.vae-claim-status .claim-meta  { font-size: .8rem; color: #666; margin-top: .25rem; display: block; }
+
+/* ── Claims table ── */
+.vae-claims-table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+.vae-claims-table thead th {
+  padding: .5rem .75rem;
+  text-align: left;
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #888;
+  border-bottom: 2px solid #e8e8e8;
+}
+.vae-claims-table tbody tr { border-bottom: 1px solid #f4f4f4; }
+.vae-claims-table tbody tr:last-child { border-bottom: none; }
+.vae-claims-table tbody td { padding: .7rem .75rem; vertical-align: middle; }
+.vae-claims-table .claim-notes { font-size: .78rem; color: #888; margin-top: .2rem; }
+
+/* ── Status chips ── */
+.status-chip {
+  display: inline-block;
+  padding: .2rem .6rem;
+  border-radius: 20px;
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.status-chip-confirmed { background: #e8f5e9; color: #2e7d32; }
+.status-chip-pending   { background: #e3f2fd; color: #1565c0; }
+.status-chip-rejected  { background: #fdecea; color: #c62828; }
+.status-chip-withdrawn { background: #f5f5f5; color: #757575; }
+
+/* ── Action button groups ── */
+.vae-action-group { display: flex; flex-direction: column; gap: .5rem; }
+.vae-action-group .button { margin: 0; }
+.vae-action-group form { margin: 0; }
+
+/* ── Locked notice ── */
+.vae-locked-notice {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .8rem 1rem;
+  background: #fafafa;
+  border: 1px solid #e8e8e8;
+  border-radius: 3px;
+  font-size: .875rem;
+  color: #888;
+}
+.vae-locked-notice .fa { color: #ccc; }
+
+/* ── Pool table (manager) ── */
+.vae-pool-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.vae-pool-table thead th {
+  padding: .5rem .75rem;
+  text-align: left;
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #888;
+  border-bottom: 2px solid #e8e8e8;
+  white-space: nowrap;
+}
+.vae-pool-table tbody tr { border-bottom: 1px solid #f4f4f4; }
+.vae-pool-table tbody tr:last-child { border-bottom: none; }
+.vae-pool-table tbody td { padding: .7rem .75rem; vertical-align: middle; }
+.vae-pool-table .member-name { font-weight: 600; color: #222; }
+.vae-pool-table .member-email { font-size: .8rem; color: #888; }
+.vae-pool-table .member-meta { font-size: .8rem; color: #aaa; }
+
+/* ── Empty pool notice ── */
+.vae-empty-pool {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: #bbb;
+  font-size: .9rem;
+}
+.vae-empty-pool .fa { display: block; font-size: 2rem; margin-bottom: .5rem; color: #ddd; }
+
+/* ── Search widget (manager) ── */
+.vae-search-wrap { display: flex; gap: .5rem; align-items: flex-start; margin-bottom: 1rem; }
+.vae-search-wrap input[type="text"] { flex: 1; margin: 0; height: 2.4375rem; }
+.vae-search-wrap .button { margin: 0; white-space: nowrap; flex-shrink: 0; }
+
+/* ── Search results table ── */
+.vae-search-results-table { width: 100%; border-collapse: collapse; font-size: .875rem; margin-top: .5rem; }
+.vae-search-results-table thead th {
+  padding: .45rem .75rem;
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #888;
+  border-bottom: 2px solid #e8e8e8;
+  text-align: left;
+}
+.vae-search-results-table tbody tr { border-bottom: 1px solid #f4f4f4; }
+.vae-search-results-table tbody td { padding: .65rem .75rem; vertical-align: middle; }
+.vae-no-results { font-size: .875rem; color: #aaa; padding: .75rem 0; }
+.vae-search-results-table .result-email { color: #888; }
+
+/* ── How-it-works list (manager sidebar) ── */
+.vae-how-list { list-style: none; margin: 0 0 1.5rem; padding: 0; }
+.vae-how-list li {
+  display: flex;
+  gap: .75rem;
+  padding: .65rem 0;
+  border-bottom: 1px solid #f4f4f4;
+  font-size: .875rem;
+  line-height: 1.5;
+  color: #444;
+}
+.vae-how-list li:last-child { border-bottom: none; }
+.vae-how-list .step-num {
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: #e8f4fb;
+  color: #2199e8;
+  font-size: .72rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: .1rem;
+}

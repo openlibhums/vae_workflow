@@ -1,0 +1,235 @@
+{% extends "admin/core/base.html" %}
+{% load foundation static %}
+
+{% block css %}{{ block.super }}<link rel="stylesheet" href="{% static 'admin/css/vae_workflow.css' %}">{% endblock %}
+
+{% block title %}VAE Claiming — {{ article.title }}{% endblock %}
+{% block title-section %}VAE Claiming{% endblock %}
+{% block title-sub %}#{{ article.pk }} / {{ article.correspondence_author.last_name }} / {{ article.safe_title }}{% endblock %}
+
+{% block breadcrumbs %}
+    <li><a href="{% url 'vae_articles' %}">VAE Claiming</a></li>
+    <li>Article #{{ article.pk }}</li>
+{% endblock %}
+
+{% block body %}
+<div class="row expanded">
+
+  {# ── Left column ── #}
+  <div class="large-6 columns">
+
+    <div class="box">
+      <div class="title-area"><h2>Article Details</h2></div>
+      <div class="content">
+        <table class="vae-meta-table">
+          <tbody>
+            <tr>
+              <th>ID</th>
+              <td>#{{ article.pk }}</td>
+            </tr>
+            <tr>
+              <th>Title</th>
+              <td>{{ article.safe_title }}</td>
+            </tr>
+            <tr>
+              <th>Authors</th>
+              <td>{{ article.author_list }}</td>
+            </tr>
+            {% if article.section %}
+            <tr>
+              <th>Section</th>
+              <td>{{ article.section.name }}</td>
+            </tr>
+            {% endif %}
+            <tr>
+              <th>Submitted</th>
+              <td>{{ article.date_submitted|date:"j F Y" }}</td>
+            </tr>
+            {% if article.abstract %}
+            <tr>
+              <th>Abstract</th>
+              <td>{{ article.abstract|safe }}</td>
+            </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% if existing_claim %}
+    <div class="box">
+      <div class="title-area"><h2>Assigned Editor</h2></div>
+      <div class="content">
+        <div class="vae-assigned-banner">
+          <span class="fa fa-check-circle"></span>
+          <div>
+            <strong>{{ existing_claim.claimed_by.full_name }}</strong> is the assigned handling editor.
+            {% if article.date_accepted or article.date_declined %}
+            <div class="revision-note"><span class="fa fa-refresh"></span> This article has returned from revision.</div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="vae-action-group">
+          <form method="POST">
+            {% csrf_token %}
+            {% if in_claiming_stage %}
+            <button class="button success expanded" name="action" value="advance">
+              <span class="fa fa-arrow-circle-right"></span> Advance to Next Stage
+            </button>
+            {% endif %}
+            {% if existing_claim and article.stage != 'Under Review' and article.stage != 'Under Revision' and not in_claiming_stage %}
+            <button class="button success expanded" name="action" value="advance">
+              <span class="fa fa-arrow-circle-right"></span> Move to Review
+            </button>
+            {% endif %}
+            <button class="button alert expanded" name="action" value="reset"
+                    onclick="return confirm('Remove this claim? The VAE will be unassigned and the article will be open for re-claiming.')">
+              <span class="fa fa-times-circle"></span> Remove Claim
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="box">
+      <div class="title-area"><h2>Actions</h2></div>
+      <div class="content">
+        <div class="vae-action-group">
+          {% if not user_in_pool and in_claiming_stage %}
+          <form method="POST">
+            {% csrf_token %}
+            <button class="button expanded" name="action" value="notify_vaes">
+              <span class="fa fa-envelope"></span> Notify VAEs
+            </button>
+          </form>
+          {% endif %}
+          {% if article.current_workflow_element %}
+          <a href="{{ article.current_workflow_element_url }}" class="button expanded">
+            <span class="fa fa-arrow-circle-right"></span>
+            Current Workflow: {{ article.current_workflow_element.element_name|title }}
+          </a>
+          {% endif %}
+          <a href="{% url 'review_unassigned_article' article.pk %}" class="button expanded">
+            <span class="fa fa-file-text-o"></span> Editor Assignment
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  {# ── Right column ── #}
+  <div class="large-6 columns">
+
+    {% if user_in_pool and claimable_stage %}
+    <div class="box">
+      <div class="title-area"><h2>Your Claim</h2></div>
+      <div class="content">
+
+        {% if user_claim.status == 'pending' %}
+          {# Active pending claim — show status and allow withdrawal #}
+          <div class="vae-claim-status is-pending">
+            <span class="claim-status-label">{{ user_claim.get_status_display }}</span>
+            <span class="claim-meta">Claimed {{ user_claim.date_claimed|date:"j F Y, H:i" }}</span>
+            {% if user_claim.notes %}<span class="claim-meta">Notes: {{ user_claim.notes }}</span>{% endif %}
+          </div>
+          <form method="POST">
+            {% csrf_token %}
+            <button class="button alert expanded" name="action" value="withdraw">
+              <span class="fa fa-times"></span> Withdraw My Claim
+            </button>
+          </form>
+
+        {% elif user_claim.status == 'confirmed' %}
+          {# Confirmed claim — show status and allow rescind #}
+          <div class="vae-claim-status is-confirmed">
+            <span class="claim-status-label">{{ user_claim.get_status_display }}</span>
+            <span class="claim-meta">Claimed {{ user_claim.date_claimed|date:"j F Y, H:i" }}</span>
+            {% if user_claim.notes %}<span class="claim-meta">Notes: {{ user_claim.notes }}</span>{% endif %}
+          </div>
+          <form method="POST">
+            {% csrf_token %}
+            <button class="button alert expanded" name="action" value="rescind"
+                    onclick="return confirm('Rescind your claim? You will be unassigned as handling editor and the article will be open for re-claiming.')">
+              <span class="fa fa-times-circle"></span> Rescind My Claim
+            </button>
+          </form>
+
+        {% elif can_claim %}
+          {# No active claim (or previously withdrawn/rejected) — allow claiming #}
+          <p>You are in the VAE pool and can claim this article for handling.</p>
+          <form method="POST">
+            {% csrf_token %}
+            {{ claim_form|foundation }}
+            <button class="button success expanded" name="action" value="claim">
+              <span class="fa fa-hand-o-up"></span> Claim This Article
+            </button>
+          </form>
+
+        {% else %}
+          {# Article already claimed by someone else and multiple claims not allowed #}
+          <div class="vae-locked-notice">
+            <span class="fa fa-lock"></span>
+            This article has already been claimed and is not available.
+          </div>
+        {% endif %}
+
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="box">
+      <div class="title-area"><h2>All Claims</h2></div>
+      <div class="content">
+        {% if claims %}
+        <table class="vae-claims-table">
+          <thead>
+            <tr>
+              <th>VAE</th>
+              <th>Claimed</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for claim in claims %}
+            <tr>
+              <td>
+                {{ claim.claimed_by.full_name }}
+                {% if claim.notes %}<div class="claim-notes">{{ claim.notes }}</div>{% endif %}
+              </td>
+              <td>{{ claim.date_claimed|date:"j M Y" }}</td>
+              <td>
+                <span class="status-chip
+                  {% if claim.status == 'confirmed' %}status-chip-confirmed
+                  {% elif claim.status == 'pending' %}status-chip-pending
+                  {% elif claim.status == 'rejected' %}status-chip-rejected
+                  {% else %}status-chip-withdrawn{% endif %}">
+                  {{ claim.get_status_display }}
+                </span>
+              </td>
+              <td>
+                {% if claim.status == 'pending' and claimable_stage %}
+                <form method="POST" style="white-space:nowrap;">
+                  {% csrf_token %}
+                  <input type="hidden" name="claim_id" value="{{ claim.pk }}" />
+                  <button class="button small success" name="action" value="confirm">Confirm</button>
+                  <button class="button small alert" name="action" value="reject">Reject</button>
+                </form>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p class="vae-no-results">No claims yet.</p>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
