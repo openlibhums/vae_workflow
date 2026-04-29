@@ -2,7 +2,10 @@ from django.shortcuts import render, get_object_or_404, redirect, reverse
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 
+from core import models as core_models
 from events import logic as event_logic
+from review import logic as review_logic
+from review import models as review_models
 from security import decorators
 from submission import models as submission_models
 
@@ -94,13 +97,25 @@ def articles(request):
         stage__in=VAE_VISIBLE_STAGES,
     ).exclude(
         pk__in=confirmed_article_ids,
-    ).prefetch_related('vae_claims')
+    ).prefetch_related('vae_claims').select_related('pool_availability')
+
+    unassigned_articles = articles_in_stage.filter(
+        stage=plugin_settings.STAGE,
+    ).exclude(
+        pool_availability__available=True,
+    )
+    claiming_articles = articles_in_stage.filter(
+        stage=plugin_settings.STAGE,
+        pool_availability__available=True,
+    )
 
     user_in_pool = logic.user_is_in_pool(request.user, request.journal)
 
     template = 'vae_workflow/articles.html'
     context = {
         'articles_in_stage': articles_in_stage,
+        'unassigned_articles': unassigned_articles,
+        'claiming_articles': claiming_articles,
         'user_in_pool': user_in_pool,
     }
     return render(request, template, context)
@@ -121,6 +136,10 @@ def article(request, article_id):
         journal=request.journal,
     )
 
+    availability, _ = models.ArticlePoolAvailability.objects.get_or_create(
+        article=article_obj,
+    )
+
     in_claiming_stage = article_obj.stage == plugin_settings.STAGE
     claimable_stage = article_obj.stage in VAE_VISIBLE_STAGES
     claims = article_obj.vae_claims.select_related('claimed_by', 'resolved_by')
@@ -132,6 +151,21 @@ def article(request, article_id):
     user_in_pool = logic.user_is_in_pool(request.user, request.journal)
     can_claim = logic.article_is_claimable(article_obj, request.user, request.journal)
     existing_claim = logic.confirmed_claim(article_obj)
+
+    can_assign_editor = (
+        request.user.is_editor(request)
+        or request.user.is_journal_manager(request.journal)
+        or request.user.is_staff
+    )
+    assigned_editor_ids = review_models.EditorAssignment.objects.filter(
+        article=article_obj,
+    ).values_list('editor_id', flat=True)
+    available_editors = core_models.AccountRole.objects.filter(
+        role__slug='editor',
+        journal=request.journal,
+    ).exclude(
+        user__id__in=assigned_editor_ids,
+    ).select_related('user')
 
     claim_form = forms.ClaimForm()
 
@@ -235,6 +269,49 @@ def article(request, article_id):
             messages.success(request, 'All VAEs in the pool have been notified.')
             return redirect(reverse('vae_article', kwargs={'article_id': article_id}))
 
+        elif action == 'make_available':
+            has_editor = review_models.EditorAssignment.objects.filter(
+                article=article_obj,
+            ).exists()
+            if not has_editor:
+                messages.error(
+                    request,
+                    'An editor must be assigned before this article can be '
+                    'made available to the VAE pool.',
+                )
+            else:
+                logic.make_available_for_pool(
+                    article_obj,
+                    request.user,
+                    request,
+                )
+                messages.success(
+                    request,
+                    'Article made available to the VAE pool.',
+                )
+            return redirect(reverse('vae_article', kwargs={'article_id': article_id}))
+
+        elif action == 'assign_editor' and can_assign_editor:
+            editor_id = request.POST.get('editor_id')
+            editor = get_object_or_404(core_models.Account, pk=editor_id)
+            if not editor.is_editor(request):
+                messages.error(
+                    request,
+                    'Selected user does not have the Editor role.',
+                )
+            else:
+                review_logic.assign_editor(
+                    article_obj,
+                    editor,
+                    'editor',
+                    request,
+                )
+                messages.success(
+                    request,
+                    '{} assigned as Editor.'.format(editor.full_name()),
+                )
+            return redirect(reverse('vae_article', kwargs={'article_id': article_id}))
+
         elif action == 'reject':
             claim_id = request.POST.get('claim_id')
             try:
@@ -255,6 +332,7 @@ def article(request, article_id):
     template = 'vae_workflow/article.html'
     context = {
         'article': article_obj,
+        'availability': availability,
         'in_claiming_stage': in_claiming_stage,
         'claimable_stage': claimable_stage,
         'claims': claims,
@@ -263,5 +341,7 @@ def article(request, article_id):
         'can_claim': can_claim,
         'claim_form': claim_form,
         'existing_claim': existing_claim,
+        'can_assign_editor': can_assign_editor,
+        'available_editors': available_editors,
     }
     return render(request, template, context)

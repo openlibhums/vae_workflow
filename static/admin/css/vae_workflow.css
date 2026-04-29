@@ -257,6 +257,60 @@
   color: #444;
 }
 .vae-how-list li:last-child { border-bottom: none; }
+/* ── Unassigned stage badge ── */
+.stage-badge-unassigned { background: #fff3e0; color: #e65100; }
+
+/* ── Articles list section headings ── */
+.vae-section-heading {
+  margin: 1.5rem 0 .75rem;
+  font-size: .8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #888;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+.vae-section-heading:first-of-type { margin-top: 0; }
+
+/* ── Pre-claim checklist ── */
+.vae-checklist {
+  list-style: none;
+  margin: 0 0 .5rem;
+  padding: 0;
+}
+.vae-checklist li {
+  display: flex;
+  gap: .75rem;
+  padding: .75rem 0;
+  border-bottom: 1px solid #f4f4f4;
+  font-size: .9rem;
+  line-height: 1.5;
+  color: #333;
+}
+.vae-checklist li:last-child { border-bottom: none; }
+.vae-checklist-num {
+  flex-shrink: 0;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  background: #fff3e0;
+  color: #e65100;
+  font-size: .72rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: .1rem;
+}
+.vae-checklist-action { margin-top: .2rem; font-size: .82rem; }
+.vae-checklist-action a { color: #2199e8; }
+
+/* ── Danger zone box ── */
+.vae-danger-zone { border-top: 3px solid #c62828; }
+.vae-danger-zone .title-area h2 { color: #c62828; }
+
 .vae-how-list .step-num {
   flex-shrink: 0;
   width: 1.5rem;

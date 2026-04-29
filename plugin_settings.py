@@ -1,3 +1,4 @@
+from events import logic as event_logic
 from utils import plugins
 from utils.install import update_settings
 
@@ -39,6 +40,7 @@ def install():
     update_settings(
         file_path='plugins/vae_workflow/install/settings.json',
     )
+    register_for_events()
 
 
 def hook_registry():
@@ -46,4 +48,8 @@ def hook_registry():
 
 
 def register_for_events():
-    pass
+    from plugins.vae_workflow import logic
+    event_logic.Events.register_for_event(
+        event_logic.Events.ON_ARTICLE_SUBMITTED,
+        logic.create_pool_availability,
+    )

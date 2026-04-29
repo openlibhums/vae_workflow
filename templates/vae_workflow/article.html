@@ -56,6 +56,32 @@
       </div>
     </div>
 
+    {% if can_assign_editor %}
+    <div class="box" id="assign-editor">
+      <div class="title-area"><h2>Assign Editor</h2></div>
+      <div class="content">
+        {% if available_editors %}
+        <div class="vae-action-group">
+          <form method="POST">
+            {% csrf_token %}
+            <label for="id_editor_id">Editor</label>
+            <select name="editor_id" id="id_editor_id">
+              {% for ar in available_editors %}
+              <option value="{{ ar.user.pk }}">{{ ar.user.full_name }}</option>
+              {% endfor %}
+            </select>
+            <button class="button success expanded" name="action" value="assign_editor">
+              <span class="fa fa-user-plus"></span> Assign Editor
+            </button>
+          </form>
+        </div>
+        {% else %}
+        <p>No additional editors available to assign.</p>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
     {% if existing_claim %}
     <div class="box">
       <div class="title-area"><h2>Assigned Editor</h2></div>
@@ -110,9 +136,6 @@
             Current Workflow: {{ article.current_workflow_element.element_name|title }}
           </a>
           {% endif %}
-          <a href="{% url 'review_unassigned_article' article.pk %}" class="button expanded">
-            <span class="fa fa-file-text-o"></span> Editor Assignment
-          </a>
         </div>
       </div>
     </div>
@@ -122,13 +145,67 @@
   {# ── Right column ── #}
   <div class="large-6 columns">
 
+    {% if not availability.available %}
+
+    <div class="box">
+      <div class="title-area"><h2>Pre-claim Checklist</h2></div>
+      <div class="content">
+        <p>Complete the following steps before making this article available to the VAE pool.</p>
+        <ol class="vae-checklist">
+          <li>
+            <span class="vae-checklist-num">1</span>
+            <div>
+              <strong>Check Metadata</strong>
+              <div class="vae-checklist-action"><a href="{% url 'edit_metadata' article.pk %}">Review metadata &rarr;</a></div>
+            </div>
+          </li>
+          <li>
+            <span class="vae-checklist-num">2</span>
+            <div>
+              <strong>Check File &amp; Mark as Preprint</strong>
+              <div class="vae-checklist-action"><a href="{% url 'submit_files' article.pk %}">Review files &rarr;</a></div>
+            </div>
+          </li>
+          <li>
+            <span class="vae-checklist-num">3</span>
+            <div>
+              <strong>Assign an Editor</strong>
+              <div class="vae-checklist-action"><a href="#assign-editor">Go to Assign Editor &darr;</a></div>
+            </div>
+          </li>
+        </ol>
+        <form method="POST" style="margin-top:1rem;">
+          {% csrf_token %}
+          <button class="button success expanded" name="action" value="make_available">
+            <span class="fa fa-check-circle"></span> Make Available for VAE Pool
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="box vae-danger-zone">
+      <div class="title-area"><h2>Reject / Revise</h2></div>
+      <div class="content">
+        <p>If this article is not suitable for the VAE pool:</p>
+        <div class="vae-action-group">
+          <a href="{% url 'review_decision' article.pk 'decline' %}" class="button alert expanded">
+            <span class="fa fa-times-circle"></span> Reject Article
+          </a>
+          <a href="{% url 'review_request_revisions' article.pk %}" class="button warning expanded">
+            <span class="fa fa-pencil"></span> Request Pre-Review Revision
+          </a>
+        </div>
+      </div>
+    </div>
+
+    {% else %}
+
     {% if user_in_pool and claimable_stage %}
     <div class="box">
       <div class="title-area"><h2>Your Claim</h2></div>
       <div class="content">
 
         {% if user_claim.status == 'pending' %}
-          {# Active pending claim — show status and allow withdrawal #}
           <div class="vae-claim-status is-pending">
             <span class="claim-status-label">{{ user_claim.get_status_display }}</span>
             <span class="claim-meta">Claimed {{ user_claim.date_claimed|date:"j F Y, H:i" }}</span>
@@ -142,7 +219,6 @@
           </form>
 
         {% elif user_claim.status == 'confirmed' %}
-          {# Confirmed claim — show status and allow rescind #}
           <div class="vae-claim-status is-confirmed">
             <span class="claim-status-label">{{ user_claim.get_status_display }}</span>
             <span class="claim-meta">Claimed {{ user_claim.date_claimed|date:"j F Y, H:i" }}</span>
@@ -157,7 +233,6 @@
           </form>
 
         {% elif can_claim %}
-          {# No active claim (or previously withdrawn/rejected) — allow claiming #}
           <p>You are in the VAE pool and can claim this article for handling.</p>
           <form method="POST">
             {% csrf_token %}
@@ -168,7 +243,6 @@
           </form>
 
         {% else %}
-          {# Article already claimed by someone else and multiple claims not allowed #}
           <div class="vae-locked-notice">
             <span class="fa fa-lock"></span>
             This article has already been claimed and is not available.
@@ -228,6 +302,8 @@
         {% endif %}
       </div>
     </div>
+
+    {% endif %}
 
   </div>
 

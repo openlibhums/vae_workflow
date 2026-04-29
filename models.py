@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
@@ -85,3 +86,27 @@ class EditorClaim(models.Model):
         self.date_resolved = timezone.now()
         self.resolved_by = resolved_by
         self.save()
+
+
+class ArticlePoolAvailability(models.Model):
+    """Tracks whether an article has been made available to the VAE pool."""
+    article = models.OneToOneField(
+        'submission.Article',
+        on_delete=models.CASCADE,
+        related_name='pool_availability',
+    )
+    available = models.BooleanField(default=False)
+    made_available_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='pool_availabilities_made',
+    )
+    date_made_available = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return 'Pool availability for article #{} ({})'.format(
+            self.article_id,
+            'available' if self.available else 'unassigned',
+        )

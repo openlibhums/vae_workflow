@@ -19,37 +19,26 @@
       </div>
       {% endif %}
 
+      <h3 class="vae-section-heading">
+        <span class="stage-badge stage-badge-unassigned">Unassigned</span>
+      </h3>
       <table class="vae-articles-table">
         <thead>
           <tr>
             <th>#</th>
             <th>Article</th>
-            <th>Stage</th>
             <th>Submitted</th>
             <th>Claims</th>
             <th></th>
           </tr>
         </thead>
         <tbody>
-          {% for art in articles_in_stage %}
+          {% for art in unassigned_articles %}
           <tr>
             <td>{{ art.pk }}</td>
             <td class="article-title">
               <a href="{% url 'vae_article' art.pk %}">{{ art.safe_title }}</a>
               {% if art.section %}<div class="article-meta">{{ art.section.name }}</div>{% endif %}
-            </td>
-            <td>
-              {% if art.stage == 'vae_claiming' %}
-                <span class="stage-badge stage-badge-claiming">Claiming</span>
-              {% elif art.stage == 'Under Review' %}
-                <span class="stage-badge stage-badge-review">Under Review</span>
-              {% elif art.stage == 'Under Revision' %}
-                <span class="stage-badge stage-badge-revision">Under Revision</span>
-              {% elif art.stage == 'Assigned' %}
-                <span class="stage-badge stage-badge-assigned">Assigned</span>
-              {% else %}
-                <span class="stage-badge stage-badge-default">{{ art.stage }}</span>
-              {% endif %}
             </td>
             <td>{{ art.date_submitted|date:"j M Y" }}</td>
             <td>
@@ -71,10 +60,62 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="6">
+            <td colspan="5">
               <div class="vae-empty-state">
                 <span class="fa fa-inbox"></span>
-                No unclaimed articles in the VAE or review stages.
+                No unassigned articles.
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <h3 class="vae-section-heading">
+        <span class="stage-badge stage-badge-claiming">Available for Claiming</span>
+      </h3>
+      <table class="vae-articles-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Article</th>
+            <th>Submitted</th>
+            <th>Claims</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for art in claiming_articles %}
+          <tr>
+            <td>{{ art.pk }}</td>
+            <td class="article-title">
+              <a href="{% url 'vae_article' art.pk %}">{{ art.safe_title }}</a>
+              {% if art.section %}<div class="article-meta">{{ art.section.name }}</div>{% endif %}
+            </td>
+            <td>{{ art.date_submitted|date:"j M Y" }}</td>
+            <td>
+              {% for c in art.vae_claims.all %}
+                {% if c.status == 'confirmed' %}
+                  <span class="claim-label claim-label-confirmed"><span class="fa fa-check"></span> {{ c.claimed_by.full_name }}</span>
+                {% elif c.status == 'pending' %}
+                  <span class="claim-label claim-label-pending"><span class="fa fa-clock-o"></span> {{ c.claimed_by.full_name }}</span>
+                {% elif c.status == 'rejected' %}
+                  <span class="claim-label claim-label-rejected">{{ c.claimed_by.full_name }}</span>
+                {% endif %}
+              {% empty %}
+                <span class="claim-label claim-label-none">Unclaimed</span>
+              {% endfor %}
+            </td>
+            <td class="table-actions">
+              <a href="{% url 'vae_article' art.pk %}" class="button small">View</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5">
+              <div class="vae-empty-state">
+                <span class="fa fa-inbox"></span>
+                No articles available for claiming.
               </div>
             </td>
           </tr>

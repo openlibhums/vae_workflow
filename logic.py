@@ -104,10 +104,14 @@ def article_is_claimable(article, user, journal):
     """
     Returns True if the user can claim the article.
     Rules:
+    - The article must have been made available to the pool by an editor.
     - User must be in the VAE pool.
     - User must not already have a pending/confirmed claim on this article.
     - If allow_multiple_claims is False, no other pending claim may exist.
     """
+    availability = getattr(article, 'pool_availability', None)
+    if availability is None or not availability.available:
+        return False
     if not user_is_in_pool(user, journal):
         return False
     if article.vae_claims.filter(claimed_by=user, status__in=('pending', 'confirmed')).exists():
@@ -189,3 +193,29 @@ def notify_vaes_pool(request, article):
 def confirmed_claim(article):
     """Return the confirmed claim for an article, if one exists."""
     return article.vae_claims.filter(status='confirmed').first()
+
+
+def create_pool_availability(article, **kwargs):
+    """
+    Event handler for ON_ARTICLE_SUBMITTED.
+
+    Creates an ArticlePoolAvailability record for the article so that
+    editors can later mark it as available to the VAE pool. Idempotent.
+    """
+    models.ArticlePoolAvailability.objects.get_or_create(article=article)
+
+
+def make_available_for_pool(article, editor, request):
+    """
+    Mark an article as available to the VAE pool, recording who did it
+    and when, then notify all VAEs in the pool.
+    """
+    availability, _ = models.ArticlePoolAvailability.objects.get_or_create(
+        article=article,
+    )
+    availability.available = True
+    availability.made_available_by = editor
+    availability.date_made_available = timezone.now()
+    availability.save()
+    notify_vaes_pool(request, article)
+    return availability
