@@ -1,0 +1,31 @@
+{% load roles vae_workflow_tags %}
+{% user_has_role request 'editor' as editor %}
+{% if editor %}
+{% vae_dashboard_counts request.journal as vae_counts %}
+<div class="large-4 columns end" data-equalizer-watch>
+    <div class="box">
+        <div class="title-area">
+            <h2>VAE Workflow</h2>
+            <a href="{% url 'vae_overview' %}" class="button">Overview</a>
+        </div>
+        <div class="content">
+            <div class="summary">
+                <span class="stat alert">{{ vae_counts.awaiting_release }}</span>
+                <span class="title">Awaiting Release</span>
+            </div>
+            <div class="summary">
+                <span class="stat">{{ vae_counts.available_to_claim }}</span>
+                <span class="title">Available to Claim</span>
+            </div>
+            <div class="summary">
+                <span class="stat success">{{ vae_counts.confirmed_claims }}</span>
+                <span class="title">Confirmed Handlers</span>
+            </div>
+            <div class="button-group expanded">
+                <a href="{% url 'vae_articles' %}" class="button small">Articles</a>
+                <a href="{% url 'vae_manager' %}" class="button small secondary">Manage Pool</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}

@@ -1,4 +1,5 @@
 import importlib
+from unittest import mock
 
 from django.conf import settings
 from django.test import TestCase, override_settings
@@ -108,7 +109,11 @@ class TestArticleViewAvailability(TestCase):
         )
         self.assertFalse(availability.available)
 
-    def test_make_available_succeeds_with_editor_assigned(self):
+    @mock.patch("plugins.vae_workflow.logic.has_preprint", return_value=True)
+    @mock.patch("plugins.vae_workflow.logic.notify_vaes_pool")
+    def test_make_available_succeeds_with_editor_assigned(
+        self, mock_notify, mock_has_preprint,
+    ):
         self.client.force_login(self.editor)
         response = self.client.post(
             self.article_url(self.article_with_editor),

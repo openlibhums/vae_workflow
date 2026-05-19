@@ -17,6 +17,7 @@ HANDSHAKE_URL = 'vae_articles'
 ARTICLE_PK_IN_HANDSHAKE_URL = True
 STAGE = 'vae_claiming'
 KANBAN_CARD = 'vae_workflow/elements/card.html'
+DASHBOARD_TEMPLATE = 'vae_workflow/elements/dashboard.html'
 
 
 class VAEWorkflowPlugin(plugins.Plugin):

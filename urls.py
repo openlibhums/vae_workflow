@@ -24,6 +24,11 @@ urlpatterns = [
         name='vae_articles',
     ),
     re_path(
+        r'^overview/$',
+        views.overview,
+        name='vae_overview',
+    ),
+    re_path(
         r'^articles/(?P<article_id>\d+)/$',
         views.article,
         name='vae_article',

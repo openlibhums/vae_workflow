@@ -148,9 +148,16 @@
             </div>
           </li>
         </ol>
+        {% if not article.preprint %}
+        <div class="callout warning">
+          <p><span class="fa fa-exclamation-triangle"></span>
+            A preprint must be published via Isolinear before this article can
+            be released to the VAE pool.</p>
+        </div>
+        {% endif %}
         <form method="POST" style="margin-top:1rem;">
           {% csrf_token %}
-          <button class="button success expanded" name="action" value="make_available">
+          <button class="button success expanded" name="action" value="make_available"{% if not article.preprint %} disabled{% endif %}>
             <span class="fa fa-check-circle"></span> Make Available for VAE Pool
           </button>
         </form>

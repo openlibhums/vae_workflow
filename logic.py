@@ -1,7 +1,7 @@
 from django.utils import timezone
 
 from core.models import AccountRole
-from utils import notify_helpers, render_template, setting_handler
+from utils import models as utils_models, notify_helpers, render_template, setting_handler
 from plugins.vae_workflow import models
 
 
@@ -176,6 +176,7 @@ def notify_vaes_pool(request, article):
         'actor': request.user,
         'target': article,
     }
+    notified_count = 0
     for member in pool:
         context = {'article': article, 'recipient': member.account}
         body = render_template.get_message_content(
@@ -188,6 +189,18 @@ def notify_vaes_pool(request, article):
             body=body,
             log_dict=log_dict,
         )
+        notified_count += 1
+
+    utils_models.LogEntry.add_entry(
+        types='VAE Workflow',
+        description='Notified {} VAE pool member(s) that the article is available for claiming.'.format(
+            notified_count,
+        ),
+        level='Info',
+        actor=request.user,
+        request=request,
+        target=article,
+    )
 
 
 def confirmed_claim(article):
@@ -205,11 +218,23 @@ def create_pool_availability(article, **kwargs):
     models.ArticlePoolAvailability.objects.get_or_create(article=article)
 
 
+def has_preprint(article):
+    """Whether the article has a posted preprint (via Isolinear)."""
+    return bool(getattr(article, 'preprint', None))
+
+
 def make_available_for_pool(article, editor, request):
     """
     Mark an article as available to the VAE pool, recording who did it
     and when, then notify all VAEs in the pool.
+
+    Refuses if no preprint has been posted via Isolinear yet — the preprint
+    must be live online when the article is released to the pool.
+    Returns the availability record on success, or None if blocked.
     """
+    if not has_preprint(article):
+        return None
+
     availability, _ = models.ArticlePoolAvailability.objects.get_or_create(
         article=article,
     )

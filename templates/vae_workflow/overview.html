@@ -1,0 +1,74 @@
+{% extends "admin/core/base.html" %}
+{% load foundation static %}
+
+{% block css %}{{ block.super }}<link rel="stylesheet" href="{% static 'admin/css/vae_workflow.css' %}">{% endblock %}
+
+{% block title %}VAE Workflow Overview{% endblock %}
+{% block title-section %}VAE Workflow Overview{% endblock %}
+{% block title-sub %}Articles in or through the VAE workflow, grouped by stage.{% endblock %}
+
+{% block body %}
+{% if total_articles == 0 %}
+<div class="box">
+  <div class="content">
+    <div class="vae-overview-empty">
+      <span class="fa fa-inbox"></span>
+      <p>No articles are currently in the VAE workflow.</p>
+    </div>
+  </div>
+</div>
+{% else %}
+{% for stage_label, articles in grouped_articles %}
+<div class="box">
+  <div class="title-area">
+    <h2>{{ stage_label }} ({{ articles|length }})</h2>
+  </div>
+  <div class="content">
+    <table class="vae-overview-table scroll">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Article</th>
+          <th>Section</th>
+          <th>Claimant(s)</th>
+          <th>Status</th>
+          <th>Released to Pool</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for article in articles %}
+        <tr>
+          <td>{{ article.pk }}</td>
+          <td class="article-title">
+            <a href="{% url 'vae_article' article.pk %}">{{ article.safe_title }}</a>
+          </td>
+          <td>{% if article.section %}{{ article.section.name }}{% else %}&mdash;{% endif %}</td>
+          <td>
+            {% for claim in article.vae_claims.all %}{% if claim.status == 'confirmed' %}<span class="label success"><span class="fa fa-check"></span> {{ claim.claimed_by.full_name }}</span> {% endif %}{% endfor %}
+            {% for claim in article.vae_claims.all %}{% if claim.status == 'pending' %}<span class="label secondary">{{ claim.claimed_by.full_name }}</span> {% endif %}{% endfor %}
+            {% if not article.vae_claims.all %}&mdash;{% endif %}
+          </td>
+          <td>
+            {% if article.vae_claims.all %}
+              {% for claim in article.vae_claims.all %}{% if claim.status == 'confirmed' %}<span class="label success">Confirmed</span>{% endif %}{% endfor %}
+              {% for claim in article.vae_claims.all %}{% if claim.status == 'pending' %}<span class="label warning">Pending</span>{% endif %}{% endfor %}
+            {% else %}
+              <span class="label">Awaiting claim</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if article.pool_availability.date_made_available %}{{ article.pool_availability.date_made_available|date:"j M Y" }}{% else %}&mdash;{% endif %}
+          </td>
+          <td>
+            <a href="{% url 'vae_article' article.pk %}" class="button small">View</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

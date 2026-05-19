@@ -1,3 +1,6 @@
+from collections import OrderedDict
+
+from django.db.models import Q
 from django.shortcuts import render, get_object_or_404, redirect, reverse
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -10,6 +13,7 @@ from security import decorators
 from submission import models as submission_models
 
 from plugins.vae_workflow import forms, logic, models, plugin_settings
+from plugins.vae_workflow.security import editor_or_vae_required
 
 
 @decorators.has_journal
@@ -75,8 +79,38 @@ VAE_VISIBLE_STAGES = [
 ]
 
 
+OVERVIEW_STAGE_LABELS = OrderedDict([
+    (plugin_settings.STAGE, 'VAE Claiming'),
+    (submission_models.STAGE_UNASSIGNED, 'Unassigned'),
+    (submission_models.STAGE_ASSIGNED, 'Assigned'),
+    (submission_models.STAGE_UNDER_REVIEW, 'Under Review'),
+    (submission_models.STAGE_UNDER_REVISION, 'Under Revision'),
+])
+
+
+def dashboard_counts(journal):
+    """Counts used by the editor dashboard card."""
+    articles = submission_models.Article.objects.filter(
+        journal=journal,
+        stage=plugin_settings.STAGE,
+    ).select_related('pool_availability')
+
+    awaiting = articles.exclude(pool_availability__available=True).count()
+    available = articles.filter(pool_availability__available=True).count()
+    confirmed = models.EditorClaim.objects.filter(
+        article__journal=journal,
+        status='confirmed',
+    ).values('article').distinct().count()
+
+    return {
+        'awaiting_release': awaiting,
+        'available_to_claim': available,
+        'confirmed_claims': confirmed,
+    }
+
+
 @decorators.has_journal
-@decorators.editor_user_required
+@editor_or_vae_required
 def articles(request):
     """
     HANDSHAKE_URL — lists articles relevant to the VAE workflow.
@@ -279,6 +313,12 @@ def article(request, article_id):
                     'An editor must be assigned before this article can be '
                     'made available to the VAE pool.',
                 )
+            elif not logic.has_preprint(article_obj):
+                messages.error(
+                    request,
+                    'A preprint must be published via Isolinear before this '
+                    'article can be released to the VAE pool.',
+                )
             else:
                 logic.make_available_for_pool(
                     article_obj,
@@ -343,5 +383,48 @@ def article(request, article_id):
         'existing_claim': existing_claim,
         'can_assign_editor': can_assign_editor,
         'available_editors': available_editors,
+    }
+    return render(request, template, context)
+
+
+@decorators.has_journal
+@decorators.editor_user_required
+def overview(request):
+    """
+    Senior editor overview of every article in or through the VAE workflow.
+
+    Shows articles grouped by stage so editors can see at a glance which
+    articles are awaiting release, which are being claimed, and which
+    have been confirmed and are progressing.
+    """
+    articles = submission_models.Article.objects.filter(
+        journal=request.journal,
+    ).filter(
+        Q(vae_claims__isnull=False)
+        | Q(pool_availability__available=True),
+    ).distinct().select_related(
+        'section', 'pool_availability',
+    ).prefetch_related(
+        'vae_claims__claimed_by',
+        'vae_claims__resolved_by',
+    )
+
+    grouped = OrderedDict(
+        (label, []) for label in OVERVIEW_STAGE_LABELS.values()
+    )
+    grouped['Other'] = []
+
+    for article in articles:
+        label = OVERVIEW_STAGE_LABELS.get(article.stage, 'Other')
+        grouped[label].append(article)
+
+    grouped_articles = [
+        (label, items) for label, items in grouped.items() if items
+    ]
+
+    template = 'vae_workflow/overview.html'
+    context = {
+        'grouped_articles': grouped_articles,
+        'total_articles': sum(len(items) for _, items in grouped_articles),
     }
     return render(request, template, context)

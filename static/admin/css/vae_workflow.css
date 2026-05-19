@@ -325,3 +325,18 @@
   justify-content: center;
   margin-top: .1rem;
 }
+
+/* Dashboard card action row */
+.vae-dashboard-actions {
+  margin-top: 1rem;
+  text-align: center;
+}
+
+/* Overview page */
+.vae-overview-table { width: 100%; }
+.vae-overview-table td.article-title a { font-weight: 600; }
+.vae-overview-empty {
+  padding: 1.5rem;
+  text-align: center;
+  color: #777;
+}
