@@ -19,6 +19,7 @@
       </div>
       {% endif %}
 
+      {% if is_editor %}
       <h3 class="vae-section-heading">
         <span class="stage-badge stage-badge-unassigned">Unassigned</span>
       </h3>
@@ -70,6 +71,7 @@
           {% endfor %}
         </tbody>
       </table>
+      {% endif %}
 
       <h3 class="vae-section-heading">
         <span class="stage-badge stage-badge-claiming">Available for Claiming</span>

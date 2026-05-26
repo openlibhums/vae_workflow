@@ -175,6 +175,11 @@ def articles(request):
     )
 
     user_in_pool = logic.user_is_in_pool(request.user, request.journal)
+    is_editor = (
+        request.user.is_editor(request)
+        or request.user.is_staff
+        or request.user.is_journal_manager(request.journal)
+    )
 
     template = 'vae_workflow/articles.html'
     context = {
@@ -182,12 +187,13 @@ def articles(request):
         'unassigned_articles': unassigned_articles,
         'claiming_articles': claiming_articles,
         'user_in_pool': user_in_pool,
+        'is_editor': is_editor,
     }
     return render(request, template, context)
 
 
 @decorators.has_journal
-@decorators.editor_user_required
+@editor_or_vae_required
 def article(request, article_id):
     """
     JUMP_URL — claim management page for a single article.

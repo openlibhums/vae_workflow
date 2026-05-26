@@ -132,3 +132,130 @@ class TestEditorOrVAERequired(TestCase):
         response = self.call_decorated_view(inactive)
         self.assertEqual(response.status_code, 302)
         self.assertIn(reverse("core_login"), response.url)
+
+
+@override_settings(URL_CONFIG="domain")
+class TestArticlesViewIntegration(TestCase):
+    """Integration tests hitting the actual vae_articles view via the
+    test client, exercising the full middleware and decorator stack."""
+
+    @classmethod
+    def setUpTestData(cls):
+        helpers.create_press()
+        cls.journal_one, cls.journal_two = helpers.create_journals()
+        helpers.create_roles(
+            ["editor", "section-editor", "journal-manager", "author"],
+        )
+        vae_plugin_settings.VAEWorkflowPlugin.install()
+        clear_url_caches()
+        importlib.reload(importlib.import_module(settings.ROOT_URLCONF))
+        importlib.reload(importlib.import_module("core.include_urls"))
+
+        cls.editor = helpers.create_editor(cls.journal_one)
+        cls.section_editor = helpers.create_section_editor(cls.journal_one)
+        cls.vae_pool_section_editor = helpers.create_section_editor(
+            cls.journal_one,
+            email="vae_se@example.com",
+        )
+        models.VAEPoolMember.objects.create(
+            journal=cls.journal_one,
+            account=cls.vae_pool_section_editor,
+            added_by=cls.editor,
+        )
+        cls.author = helpers.create_user(
+            "author@example.com",
+            roles=["author"],
+            journal=cls.journal_one,
+            is_active=True,
+        )
+        cls.url = reverse("vae_articles")
+
+    def test_editor_can_access_articles_view(self):
+        self.client.force_login(self.editor)
+        response = self.client.get(
+            self.url,
+            SERVER_NAME=self.journal_one.domain,
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_section_editor_can_access_articles_view(self):
+        self.client.force_login(self.section_editor)
+        response = self.client.get(
+            self.url,
+            SERVER_NAME=self.journal_one.domain,
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_section_editor_in_pool_can_access_articles_view(self):
+        self.client.force_login(self.vae_pool_section_editor)
+        response = self.client.get(
+            self.url,
+            SERVER_NAME=self.journal_one.domain,
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_author_cannot_access_articles_view(self):
+        self.client.force_login(self.author)
+        response = self.client.get(
+            self.url,
+            SERVER_NAME=self.journal_one.domain,
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_section_editor_in_pool_sees_only_claiming_articles(self):
+        from submission import models as submission_models
+        article = helpers.create_article(
+            self.journal_one,
+            stage=vae_plugin_settings.STAGE,
+        )
+        models.ArticlePoolAvailability.objects.create(
+            article=article,
+            available=True,
+            made_available_by=self.editor,
+        )
+        unassigned = helpers.create_article(
+            self.journal_one,
+            title="Unassigned Article",
+            stage=vae_plugin_settings.STAGE,
+        )
+        models.ArticlePoolAvailability.objects.create(
+            article=unassigned,
+            available=False,
+        )
+        self.client.force_login(self.vae_pool_section_editor)
+        response = self.client.get(
+            self.url,
+            SERVER_NAME=self.journal_one.domain,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["is_editor"])
+        self.assertIn(article, response.context["claiming_articles"])
+        self.assertNotIn(
+            unassigned,
+            response.context.get("claiming_articles", []),
+        )
+
+    def test_editor_sees_unassigned_articles(self):
+        self.client.force_login(self.editor)
+        response = self.client.get(
+            self.url,
+            SERVER_NAME=self.journal_one.domain,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["is_editor"])
+
+    def test_section_editor_in_pool_can_access_article_detail(self):
+        article = helpers.create_article(
+            self.journal_one,
+            stage=vae_plugin_settings.STAGE,
+        )
+        detail_url = reverse(
+            "vae_article",
+            kwargs={"article_id": article.pk},
+        )
+        self.client.force_login(self.vae_pool_section_editor)
+        response = self.client.get(
+            detail_url,
+            SERVER_NAME=self.journal_one.domain,
+        )
+        self.assertEqual(response.status_code, 200)
