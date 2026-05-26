@@ -181,11 +181,25 @@ def articles(request):
         or request.user.is_journal_manager(request.journal)
     )
 
+    my_claimed_articles = submission_models.Article.objects.none()
+    if not is_editor and user_in_pool:
+        my_claimed_article_ids = models.EditorClaim.objects.filter(
+            article__journal=request.journal,
+            claimed_by=request.user,
+            status__in=('pending', 'confirmed'),
+        ).values_list('article_id', flat=True)
+        my_claimed_articles = submission_models.Article.objects.filter(
+            pk__in=my_claimed_article_ids,
+        ).exclude(
+            pk__in=claiming_articles.values_list('pk', flat=True),
+        ).prefetch_related('vae_claims').select_related('pool_availability')
+
     template = 'vae_workflow/articles.html'
     context = {
         'articles_in_stage': articles_in_stage,
         'unassigned_articles': unassigned_articles,
         'claiming_articles': claiming_articles,
+        'my_claimed_articles': my_claimed_articles,
         'user_in_pool': user_in_pool,
         'is_editor': is_editor,
     }
@@ -223,11 +237,12 @@ def article(request, article_id):
     can_claim = logic.article_is_claimable(article_obj, request.user, request.journal)
     existing_claim = logic.confirmed_claim(article_obj)
 
-    can_assign_editor = (
+    is_editor = (
         request.user.is_editor(request)
-        or request.user.is_journal_manager(request.journal)
         or request.user.is_staff
+        or request.user.is_journal_manager(request.journal)
     )
+    can_assign_editor = is_editor
     assign_editor_form = forms.AssignEditorForm(
         article=article_obj,
         journal=request.journal,
@@ -422,6 +437,7 @@ def article(request, article_id):
         'can_claim': can_claim,
         'claim_form': claim_form,
         'existing_claim': existing_claim,
+        'is_editor': is_editor,
         'can_assign_editor': can_assign_editor,
         'assign_editor_form': assign_editor_form,
         'isolinear_url': isolinear_url,

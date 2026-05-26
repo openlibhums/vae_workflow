@@ -125,6 +125,47 @@
         </tbody>
       </table>
 
+      {% if not is_editor and my_claimed_articles %}
+      <h3 class="vae-section-heading">
+        <span class="stage-badge stage-badge-confirmed">My Claims</span>
+      </h3>
+      <table class="vae-articles-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Article</th>
+            <th>Stage</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for art in my_claimed_articles %}
+          <tr>
+            <td>{{ art.pk }}</td>
+            <td class="article-title">
+              <a href="{% url 'vae_article' art.pk %}">{{ art.safe_title }}</a>
+              {% if art.section %}<div class="article-meta">{{ art.section.name }}</div>{% endif %}
+            </td>
+            <td>{{ art.stage }}</td>
+            <td>
+              {% for c in art.vae_claims.all %}
+                {% if c.claimed_by_id == request.user.pk %}
+                  <span class="claim-label {% if c.status == 'confirmed' %}claim-label-confirmed{% elif c.status == 'pending' %}claim-label-pending{% endif %}">
+                    {{ c.get_status_display }}
+                  </span>
+                {% endif %}
+              {% endfor %}
+            </td>
+            <td class="table-actions">
+              <a href="{% url 'vae_article' art.pk %}" class="button small">View</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+
     </div>
   </div>
 </div>
