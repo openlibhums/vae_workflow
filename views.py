@@ -2,16 +2,17 @@ from collections import OrderedDict
 
 from django.db.models import Q
 from django.shortcuts import render, get_object_or_404, redirect, reverse
+from django.urls import NoReverseMatch
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 
-from core import models as core_models
 from events import logic as event_logic
 from review import logic as review_logic
 from review import models as review_models
 from security import decorators
 from submission import models as submission_models
 
+from utils import plugins as plugin_utils
 from plugins.vae_workflow import forms, logic, models, plugin_settings
 from plugins.vae_workflow.security import editor_or_vae_required
 
@@ -109,6 +110,36 @@ def dashboard_counts(journal):
     }
 
 
+def user_dashboard_counts(user, journal):
+    """Counts for an individual VAE pool member's dashboard card."""
+    available = submission_models.Article.objects.filter(
+        journal=journal,
+        stage=plugin_settings.STAGE,
+        pool_availability__available=True,
+    ).exclude(
+        vae_claims__claimed_by=user,
+        vae_claims__status__in=('pending', 'confirmed'),
+    ).count()
+
+    my_pending = models.EditorClaim.objects.filter(
+        article__journal=journal,
+        claimed_by=user,
+        status='pending',
+    ).count()
+
+    my_confirmed = models.EditorClaim.objects.filter(
+        article__journal=journal,
+        claimed_by=user,
+        status='confirmed',
+    ).count()
+
+    return {
+        'available_to_claim': available,
+        'my_pending': my_pending,
+        'my_confirmed': my_confirmed,
+    }
+
+
 @decorators.has_journal
 @editor_or_vae_required
 def articles(request):
@@ -191,15 +222,10 @@ def article(request, article_id):
         or request.user.is_journal_manager(request.journal)
         or request.user.is_staff
     )
-    assigned_editor_ids = review_models.EditorAssignment.objects.filter(
+    assign_editor_form = forms.AssignEditorForm(
         article=article_obj,
-    ).values_list('editor_id', flat=True)
-    available_editors = core_models.AccountRole.objects.filter(
-        role__slug='editor',
         journal=request.journal,
-    ).exclude(
-        user__id__in=assigned_editor_ids,
-    ).select_related('user')
+    )
 
     claim_form = forms.ClaimForm()
 
@@ -332,14 +358,13 @@ def article(request, article_id):
             return redirect(reverse('vae_article', kwargs={'article_id': article_id}))
 
         elif action == 'assign_editor' and can_assign_editor:
-            editor_id = request.POST.get('editor_id')
-            editor = get_object_or_404(core_models.Account, pk=editor_id)
-            if not editor.is_editor(request):
-                messages.error(
-                    request,
-                    'Selected user does not have the Editor role.',
-                )
-            else:
+            assign_editor_form = forms.AssignEditorForm(
+                request.POST,
+                article=article_obj,
+                journal=request.journal,
+            )
+            if assign_editor_form.is_valid():
+                editor = assign_editor_form.cleaned_data['editor']
                 review_logic.assign_editor(
                     article_obj,
                     editor,
@@ -369,6 +394,16 @@ def article(request, article_id):
                 messages.error(request, 'Claim not found.')
             return redirect(reverse('vae_article', kwargs={'article_id': article_id}))
 
+    isolinear_url = None
+    if plugin_utils.check_plugin_exists('isolinear'):
+        try:
+            isolinear_url = reverse(
+                'isolinear_publish_preprint',
+                kwargs={'article_id': article_obj.pk},
+            )
+        except NoReverseMatch:
+            pass
+
     template = 'vae_workflow/article.html'
     context = {
         'article': article_obj,
@@ -382,7 +417,8 @@ def article(request, article_id):
         'claim_form': claim_form,
         'existing_claim': existing_claim,
         'can_assign_editor': can_assign_editor,
-        'available_editors': available_editors,
+        'assign_editor_form': assign_editor_form,
+        'isolinear_url': isolinear_url,
     }
     return render(request, template, context)
 

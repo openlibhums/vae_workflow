@@ -71,7 +71,7 @@ class TestVAEAssignEditor(TestCase):
             self.assign_editor_url(),
             data={
                 "action": "assign_editor",
-                "editor_id": self.other_editor.pk,
+                "editor": self.other_editor.pk,
             },
             SERVER_NAME=self.journal_one.domain,
         )
@@ -90,7 +90,7 @@ class TestVAEAssignEditor(TestCase):
             self.assign_editor_url(),
             data={
                 "action": "assign_editor",
-                "editor_id": self.other_editor.pk,
+                "editor": self.other_editor.pk,
             },
             SERVER_NAME=self.journal_one.domain,
         )
@@ -109,7 +109,7 @@ class TestVAEAssignEditor(TestCase):
             self.assign_editor_url(),
             data={
                 "action": "assign_editor",
-                "editor_id": self.other_editor.pk,
+                "editor": self.other_editor.pk,
             },
             SERVER_NAME=self.journal_one.domain,
         )
@@ -133,7 +133,7 @@ class TestVAEAssignEditor(TestCase):
             self.assign_editor_url(),
             data={
                 "action": "assign_editor",
-                "editor_id": self.other_editor.pk,
+                "editor": self.other_editor.pk,
             },
             SERVER_NAME=self.journal_one.domain,
         )
@@ -151,9 +151,10 @@ class TestVAEAssignEditor(TestCase):
             SERVER_NAME=self.journal_one.domain,
         )
         self.assertEqual(response.status_code, 200)
+        form = response.context["assign_editor_form"]
         available_editor_ids = list(
-            response.context["available_editors"].values_list(
-                "user_id",
+            form.fields["editor"].queryset.values_list(
+                "pk",
                 flat=True,
             ),
         )
@@ -178,7 +179,7 @@ class TestVAEAssignEditor(TestCase):
             self.assign_editor_url(),
             data={
                 "action": "assign_editor",
-                "editor_id": non_editor.pk,
+                "editor": non_editor.pk,
             },
             SERVER_NAME=self.journal_one.domain,
         )

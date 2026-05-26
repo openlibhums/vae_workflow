@@ -137,7 +137,13 @@
             <span class="vae-checklist-num">2</span>
             <div>
               <strong>Check File &amp; Mark as Preprint</strong>
-              <div class="vae-checklist-action"><a href="{% url 'document_management' article.pk %}" target="_blank" rel="noopener">Review files &rarr;</a></div>
+              <div class="vae-checklist-action">
+                {% if isolinear_url %}
+                <a href="{{ isolinear_url }}" target="_blank" rel="noopener">Publish preprint via Isolinear &rarr;</a>
+                {% else %}
+                <a href="{% url 'document_management' article.pk %}" target="_blank" rel="noopener">Review files &rarr;</a>
+                {% endif %}
+              </div>
             </div>
           </li>
           <li>
@@ -168,16 +174,11 @@
     <div class="box" id="assign-editor">
       <div class="title-area"><h2>Assign Editor</h2></div>
       <div class="content">
-        {% if available_editors %}
+        {% if assign_editor_form.fields.editor.queryset.exists %}
         <div class="vae-action-group">
           <form method="POST">
             {% csrf_token %}
-            <label for="id_editor_id">Editor</label>
-            <select name="editor_id" id="id_editor_id">
-              {% for ar in available_editors %}
-              <option value="{{ ar.user.pk }}">{{ ar.user.full_name }}</option>
-              {% endfor %}
-            </select>
+            {{ assign_editor_form.as_p }}
             <button class="button success expanded" name="action" value="assign_editor">
               <span class="fa fa-user-plus"></span> Assign Editor
             </button>

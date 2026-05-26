@@ -1,14 +1,18 @@
 {% load roles vae_workflow_tags %}
 {% user_has_role request 'editor' as editor %}
-{% if editor %}
-{% vae_dashboard_counts request.journal as vae_counts %}
+{% user_in_vae_pool request.user request.journal as in_pool %}
+{% if editor or in_pool %}
 <div class="large-4 columns end" data-equalizer-watch>
     <div class="box">
         <div class="title-area">
             <h2>VAE Workflow</h2>
+            {% if editor %}
             <a href="{% url 'vae_overview' %}" class="button">Overview</a>
+            {% endif %}
         </div>
         <div class="content">
+            {% if editor %}
+            {% vae_dashboard_counts request.journal as vae_counts %}
             <div class="summary">
                 <span class="stat alert">{{ vae_counts.awaiting_release }}</span>
                 <span class="title">Awaiting Release</span>
@@ -21,9 +25,29 @@
                 <span class="stat success">{{ vae_counts.confirmed_claims }}</span>
                 <span class="title">Confirmed Handlers</span>
             </div>
+            {% endif %}
+            {% if in_pool %}
+            {% vae_user_dashboard_counts request.user request.journal as my_counts %}
+            {% if not editor %}
+            <div class="summary">
+                <span class="stat">{{ my_counts.available_to_claim }}</span>
+                <span class="title">Available to Claim</span>
+            </div>
+            {% endif %}
+            <div class="summary">
+                <span class="stat">{{ my_counts.my_pending }}</span>
+                <span class="title">My Pending Claims</span>
+            </div>
+            <div class="summary">
+                <span class="stat success">{{ my_counts.my_confirmed }}</span>
+                <span class="title">My Confirmed Claims</span>
+            </div>
+            {% endif %}
             <div class="button-group expanded">
                 <a href="{% url 'vae_articles' %}" class="button small">Articles</a>
+                {% if editor %}
                 <a href="{% url 'vae_manager' %}" class="button small secondary">Manage Pool</a>
+                {% endif %}
             </div>
         </div>
     </div>
