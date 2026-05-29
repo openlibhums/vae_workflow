@@ -1,5 +1,5 @@
 {% extends "admin/core/base.html" %}
-{% load foundation static %}
+{% load foundation static i18n %}
 
 {% block css %}{{ block.super }}<link rel="stylesheet" href="{% static 'admin/css/vae_workflow.css' %}">{% endblock %}
 
@@ -45,14 +45,14 @@
             <td>
               {% for c in art.vae_claims.all %}
                 {% if c.status == 'confirmed' %}
-                  <span class="claim-label claim-label-confirmed"><span class="fa fa-check"></span> {{ c.claimed_by.full_name }}</span>
+                  <span class="claim-label claim-label-confirmed"><span class="fa fa-check" aria-hidden="true"></span> {{ c.claimed_by.full_name }}</span>
                 {% elif c.status == 'pending' %}
-                  <span class="claim-label claim-label-pending"><span class="fa fa-clock-o"></span> {{ c.claimed_by.full_name }}</span>
+                  <span class="claim-label claim-label-pending"><span class="fa fa-clock-o" aria-hidden="true"></span> {{ c.claimed_by.full_name }}</span>
                 {% elif c.status == 'rejected' %}
                   <span class="claim-label claim-label-rejected">{{ c.claimed_by.full_name }}</span>
                 {% endif %}
               {% empty %}
-                <span class="claim-label claim-label-none">Unclaimed</span>
+                <span class="claim-label claim-label-none">{% trans "Unclaimed" %}</span>
               {% endfor %}
             </td>
             <td class="table-actions">
@@ -98,14 +98,14 @@
             <td>
               {% for c in art.vae_claims.all %}
                 {% if c.status == 'confirmed' %}
-                  <span class="claim-label claim-label-confirmed"><span class="fa fa-check"></span> {{ c.claimed_by.full_name }}</span>
+                  <span class="claim-label claim-label-confirmed"><span class="fa fa-check" aria-hidden="true"></span> {{ c.claimed_by.full_name }}</span>
                 {% elif c.status == 'pending' %}
-                  <span class="claim-label claim-label-pending"><span class="fa fa-clock-o"></span> {{ c.claimed_by.full_name }}</span>
-                {% elif c.status == 'rejected' %}
+                  <span class="claim-label claim-label-pending"><span class="fa fa-clock-o" aria-hidden="true"></span> {{ c.claimed_by.full_name }}</span>
+                {% elif c.status == 'rejected' and is_editor %}
                   <span class="claim-label claim-label-rejected">{{ c.claimed_by.full_name }}</span>
                 {% endif %}
               {% empty %}
-                <span class="claim-label claim-label-none">Unclaimed</span>
+                <span class="claim-label claim-label-none">{% trans "Unclaimed" %}</span>
               {% endfor %}
             </td>
             <td class="table-actions">

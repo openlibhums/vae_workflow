@@ -104,9 +104,75 @@ class ArticlePoolAvailability(models.Model):
         related_name='pool_availabilities_made',
     )
     date_made_available = models.DateTimeField(null=True, blank=True)
+    date_last_notified = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return 'Pool availability for article #{} ({})'.format(
             self.article_id,
             'available' if self.available else 'unassigned',
+        )
+
+
+LINK_TYPE_CHOICES = (
+    ('', 'None'),
+    ('metadata', 'Review metadata'),
+    ('files', 'Review files'),
+    ('assign_editor', 'Assign Editor'),
+    ('preprint', 'Create preprint'),
+    ('notify_vaes', 'Notify VAEs'),
+)
+
+
+class ChecklistStep(models.Model):
+    journal = models.ForeignKey(
+        'journal.Journal',
+        on_delete=models.CASCADE,
+        related_name='vae_checklist_steps',
+    )
+    label = models.CharField(max_length=255)
+    help_text = models.CharField(max_length=500, blank=True, default='')
+    link_type = models.CharField(
+        max_length=50,
+        choices=LINK_TYPE_CHOICES,
+        blank=True,
+        default='',
+    )
+    order = models.PositiveIntegerField(default=0)
+    active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ('order', 'pk')
+
+    def __str__(self):
+        return '{} — {}'.format(self.journal.code, self.label)
+
+
+class ChecklistCompletion(models.Model):
+    article = models.ForeignKey(
+        'submission.Article',
+        on_delete=models.CASCADE,
+        related_name='vae_checklist_completions',
+    )
+    step = models.ForeignKey(
+        ChecklistStep,
+        on_delete=models.CASCADE,
+        related_name='completions',
+    )
+    completed = models.BooleanField(default=False)
+    completed_by = models.ForeignKey(
+        'core.Account',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+    )
+    date_completed = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ('article', 'step')
+
+    def __str__(self):
+        return 'Step "{}" for article #{} ({})'.format(
+            self.step.label,
+            self.article_id,
+            'done' if self.completed else 'pending',
         )

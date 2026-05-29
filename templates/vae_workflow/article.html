@@ -1,54 +1,70 @@
 {% extends "admin/core/base.html" %}
-{% load foundation static %}
+{% load foundation static i18n %}
 
 {% block css %}{{ block.super }}<link rel="stylesheet" href="{% static 'admin/css/vae_workflow.css' %}">{% endblock %}
 
-{% block title %}VAE Claiming — {{ article.title }}{% endblock %}
-{% block title-section %}VAE Claiming{% endblock %}
+{% block title %}{% trans "VAE Claiming" %} — {{ article.title }}{% endblock %}
+{% block title-section %}{% trans "VAE Claiming" %}{% endblock %}
 {% block title-sub %}#{{ article.pk }} / {{ article.correspondence_author.last_name }} / {{ article.safe_title }}{% endblock %}
 
 {% block breadcrumbs %}
-    <li><a href="{% url 'vae_articles' %}">VAE Claiming</a></li>
-    <li>Article #{{ article.pk }}</li>
+    <li><a href="{% url 'vae_articles' %}">{% trans "VAE Claiming" %}</a></li>
+    <li>{% blocktrans with pk=article.pk %}Article #{{ pk }}{% endblocktrans %}</li>
 {% endblock %}
 
 {% block body %}
 <div class="row expanded">
 
-  {# ── Left column ── #}
+  {# Left column #}
   <div class="large-6 columns">
 
     <div class="box">
-      <div class="title-area"><h2>Article Details</h2></div>
+      <div class="title-area"><h2>{% trans "Article Details" %}</h2></div>
       <div class="content">
         <table class="vae-meta-table">
           <tbody>
             <tr>
-              <th>ID</th>
+              <th>{% trans "ID" %}</th>
               <td>#{{ article.pk }}</td>
             </tr>
             <tr>
-              <th>Title</th>
+              <th>{% trans "Title" %}</th>
               <td>{{ article.safe_title }}</td>
             </tr>
             <tr>
-              <th>Authors</th>
+              <th>{% trans "Authors" %}</th>
               <td>{{ article.author_list }}</td>
             </tr>
             {% if article.section %}
             <tr>
-              <th>Section</th>
+              <th>{% trans "Section" %}</th>
               <td>{{ article.section.name }}</td>
             </tr>
             {% endif %}
             <tr>
-              <th>Submitted</th>
+              <th>{% trans "Submitted" %}</th>
               <td>{{ article.date_submitted|date:"j F Y" }}</td>
             </tr>
             {% if article.abstract %}
             <tr>
-              <th>Abstract</th>
+              <th>{% trans "Abstract" %}</th>
               <td>{{ article.abstract|safe }}</td>
+            </tr>
+            {% endif %}
+            {% if article.preprint %}
+            <tr>
+              <th>{% trans "Preprint" %}</th>
+              <td><a href="{% url 'isolinear_preprint_version' article_id=article.pk version_number=article.preprint.current_version.version %}" target="_blank" rel="noopener">{% trans "View preprint" %} &rarr;</a></td>
+            </tr>
+            {% endif %}
+            {% if editor_assignments %}
+            <tr>
+              <th>{% blocktrans count counter=editor_assignments|length %}Editor{% plural %}Editors{% endblocktrans %}</th>
+              <td>
+                {% for ea in editor_assignments %}
+                <div>{{ ea.editor.full_name }} ({{ ea.editor.email }})</div>
+                {% endfor %}
+              </td>
             </tr>
             {% endif %}
           </tbody>
@@ -58,14 +74,14 @@
 
     {% if existing_claim %}
     <div class="box">
-      <div class="title-area"><h2>Assigned Editor</h2></div>
+      <div class="title-area"><h2>{% trans "Assigned Editor" %}</h2></div>
       <div class="content">
         <div class="vae-assigned-banner">
-          <span class="fa fa-check-circle"></span>
+          <span class="fa fa-check-circle" aria-hidden="true"></span>
           <div>
-            <strong>{{ existing_claim.claimed_by.full_name }}</strong> is the assigned handling editor.
+            <strong>{{ existing_claim.claimed_by.full_name }}</strong> {% trans "is the assigned handling editor." %}
             {% if article.date_accepted or article.date_declined %}
-            <div class="revision-note"><span class="fa fa-refresh"></span> This article has returned from revision.</div>
+            <div class="revision-note"><span class="fa fa-refresh" aria-hidden="true"></span> {% trans "This article has returned from revision." %}</div>
             {% endif %}
           </div>
         </div>
@@ -73,19 +89,9 @@
         <div class="vae-action-group">
           <form method="POST">
             {% csrf_token %}
-            {% if in_claiming_stage %}
-            <button class="button success expanded" name="action" value="advance">
-              <span class="fa fa-arrow-circle-right"></span> Advance to Next Stage
-            </button>
-            {% endif %}
-            {% if existing_claim and article.stage != 'Under Review' and article.stage != 'Under Revision' and not in_claiming_stage %}
-            <button class="button success expanded" name="action" value="advance">
-              <span class="fa fa-arrow-circle-right"></span> Move to Review
-            </button>
-            {% endif %}
             <button class="button alert expanded" name="action" value="reset"
-                    onclick="return confirm('Remove this claim? The VAE will be unassigned and the article will be open for re-claiming.')">
-              <span class="fa fa-times-circle"></span> Remove Claim
+                    onclick="return confirm('{% trans "Remove this claim? The VAE will be unassigned and the article will be open for re-claiming." %}')">
+              <span class="fa fa-times-circle" aria-hidden="true"></span> {% trans "Remove Claim" %}
             </button>
           </form>
         </div>
@@ -93,169 +99,64 @@
       </div>
     </div>
     {% endif %}
-
-    <div class="box">
-      <div class="title-area"><h2>Actions</h2></div>
-      <div class="content">
-        <div class="vae-action-group">
-          {% if is_editor and in_claiming_stage %}
-          <form method="POST">
-            {% csrf_token %}
-            <button class="button expanded" name="action" value="notify_vaes">
-              <span class="fa fa-envelope"></span> Notify VAEs
-            </button>
-          </form>
-          {% endif %}
-          {% if article.current_workflow_element %}
-          <a href="{{ article.current_workflow_element_url }}" class="button expanded">
-            <span class="fa fa-arrow-circle-right"></span>
-            Current Workflow: {{ article.current_workflow_element.element_name|title }}
-          </a>
-          {% endif %}
-        </div>
-      </div>
-    </div>
 
   </div>
 
-  {# ── Right column ── #}
+  {# Right column #}
   <div class="large-6 columns">
 
-    {% if not availability.available and is_editor %}
-
-    <div class="box">
-      <div class="title-area"><h2>Pre-claim Checklist</h2></div>
-      <div class="content">
-        <p>Complete the following steps before making this article available to the VAE pool.</p>
-        <ol class="vae-checklist">
-          <li>
-            <span class="vae-checklist-num">1</span>
-            <div>
-              <strong>Check Metadata</strong>
-              <div class="vae-checklist-action"><a href="{% url 'edit_metadata' article.pk %}" target="_blank" rel="noopener">Review metadata &rarr;</a></div>
-            </div>
-          </li>
-          <li>
-            <span class="vae-checklist-num">2</span>
-            <div>
-              <strong>Check File &amp; Mark as Preprint</strong>
-              <div class="vae-checklist-action">
-                {% if isolinear_url %}
-                <a href="{{ isolinear_url }}" target="_blank" rel="noopener">Publish preprint via Isolinear &rarr;</a>
-                {% else %}
-                <a href="{% url 'document_management' article.pk %}" target="_blank" rel="noopener">Review files &rarr;</a>
-                {% endif %}
-              </div>
-            </div>
-          </li>
-          <li>
-            <span class="vae-checklist-num">3</span>
-            <div>
-              <strong>Assign an Editor</strong>
-              <div class="vae-checklist-action"><a href="#assign-editor">Go to Assign Editor &darr;</a></div>
-            </div>
-          </li>
-        </ol>
-        {% if not article.preprint %}
-        <div class="callout warning">
-          <p><span class="fa fa-exclamation-triangle"></span>
-            A preprint must be published via Isolinear before this article can
-            be released to the VAE pool.</p>
-        </div>
-        {% endif %}
-        <form method="POST" style="margin-top:1rem;">
-          {% csrf_token %}
-          <button class="button success expanded" name="action" value="make_available"{% if not article.preprint %} disabled{% endif %}>
-            <span class="fa fa-check-circle"></span> Make Available for VAE Pool
-          </button>
-        </form>
-      </div>
-    </div>
-
-    {% if can_assign_editor %}
-    <div class="box" id="assign-editor">
-      <div class="title-area"><h2>Assign Editor</h2></div>
-      <div class="content">
-        {% if assign_editor_form.fields.editor.queryset.exists %}
-        <div class="vae-action-group">
-          <form method="POST">
-            {% csrf_token %}
-            {{ assign_editor_form.as_p }}
-            <button class="button success expanded" name="action" value="assign_editor">
-              <span class="fa fa-user-plus"></span> Assign Editor
-            </button>
-          </form>
-        </div>
-        {% else %}
-        <p>No additional editors available to assign.</p>
-        {% endif %}
-      </div>
-    </div>
+    {% if is_editor and not availability.available %}
+      {% include "vae_workflow/elements/editor_controls.html" %}
     {% endif %}
-
-    <div class="box vae-danger-zone">
-      <div class="title-area"><h2>Reject / Revise</h2></div>
-      <div class="content">
-        <p>If this article is not suitable for the VAE pool:</p>
-        <div class="vae-action-group">
-          <a href="{% url 'review_decision' article.pk 'decline' %}" class="button alert expanded">
-            <span class="fa fa-times-circle"></span> Reject Article
-          </a>
-          <a href="{% url 'review_request_revisions' article.pk %}" class="button warning expanded">
-            <span class="fa fa-pencil"></span> Request Pre-Review Revision
-          </a>
-        </div>
-      </div>
-    </div>
-
-    {% else %}
 
     {% if user_in_pool and claimable_stage %}
     <div class="box">
-      <div class="title-area"><h2>Your Claim</h2></div>
+      <div class="title-area"><h2>{% trans "Your Claim" %}</h2></div>
       <div class="content">
 
         {% if user_claim.status == 'pending' %}
           <div class="vae-claim-status is-pending">
             <span class="claim-status-label">{{ user_claim.get_status_display }}</span>
-            <span class="claim-meta">Claimed {{ user_claim.date_claimed|date:"j F Y, H:i" }}</span>
-            {% if user_claim.notes %}<span class="claim-meta">Notes: {{ user_claim.notes }}</span>{% endif %}
+            <span class="claim-meta">{% blocktrans with date=user_claim.date_claimed|date:"j F Y, H:i" %}Claimed {{ date }}{% endblocktrans %}</span>
+            {% if user_claim.notes %}<span class="claim-meta">{% trans "Conflicts of Interest:" %} {{ user_claim.notes }}</span>{% endif %}
           </div>
+          <p class="help-text">{% trans "Withdrawing removes your pending claim on this article." %}</p>
           <form method="POST">
             {% csrf_token %}
             <button class="button alert expanded" name="action" value="withdraw">
-              <span class="fa fa-times"></span> Withdraw My Claim
+              <span class="fa fa-times" aria-hidden="true"></span> {% trans "Withdraw My Claim" %}
             </button>
           </form>
 
         {% elif user_claim.status == 'confirmed' %}
           <div class="vae-claim-status is-confirmed">
             <span class="claim-status-label">{{ user_claim.get_status_display }}</span>
-            <span class="claim-meta">Claimed {{ user_claim.date_claimed|date:"j F Y, H:i" }}</span>
-            {% if user_claim.notes %}<span class="claim-meta">Notes: {{ user_claim.notes }}</span>{% endif %}
+            <span class="claim-meta">{% blocktrans with date=user_claim.date_claimed|date:"j F Y, H:i" %}Claimed {{ date }}{% endblocktrans %}</span>
+            {% if user_claim.notes %}<span class="claim-meta">{% trans "Conflicts of Interest:" %} {{ user_claim.notes }}</span>{% endif %}
           </div>
+          <p class="help-text">{% trans "Rescinding removes you as handling editor. The article will reopen for claiming." %}</p>
           <form method="POST">
             {% csrf_token %}
             <button class="button alert expanded" name="action" value="rescind"
-                    onclick="return confirm('Rescind your claim? You will be unassigned as handling editor and the article will be open for re-claiming.')">
-              <span class="fa fa-times-circle"></span> Rescind My Claim
+                    onclick="return confirm('{% trans "Rescind your claim? You will be unassigned as handling editor and the article will be open for re-claiming." %}')">
+              <span class="fa fa-times-circle" aria-hidden="true"></span> {% trans "Rescind My Claim" %}
             </button>
           </form>
 
         {% elif can_claim %}
-          <p>You are in the VAE pool and can claim this article for handling.</p>
+          <p>{% trans "You are in the VAE pool and can claim this article for handling." %}</p>
           <form method="POST">
             {% csrf_token %}
             {{ claim_form|foundation }}
             <button class="button success expanded" name="action" value="claim">
-              <span class="fa fa-hand-o-up"></span> Claim This Article
+              <span class="fa fa-hand-o-up" aria-hidden="true"></span> {% trans "Claim This Article" %}
             </button>
           </form>
 
         {% else %}
           <div class="vae-locked-notice">
-            <span class="fa fa-lock"></span>
-            This article has already been claimed and is not available.
+            <span class="fa fa-lock" aria-hidden="true"></span>
+            {% trans "This article has already been claimed and is not available." %}
           </div>
         {% endif %}
 
@@ -265,16 +166,16 @@
 
     {% if is_editor %}
     <div class="box">
-      <div class="title-area"><h2>All Claims</h2></div>
+      <div class="title-area"><h2>{% trans "All Claims" %}</h2></div>
       <div class="content">
         {% if claims %}
         <table class="vae-claims-table">
           <thead>
             <tr>
-              <th>VAE</th>
-              <th>Claimed</th>
-              <th>Status</th>
-              <th></th>
+              <th>{% trans "VAE" %}</th>
+              <th>{% trans "Claimed" %}</th>
+              <th>{% trans "Status" %}</th>
+              <th><span class="show-for-sr">{% trans "Actions" %}</span></th>
             </tr>
           </thead>
           <tbody>
@@ -282,7 +183,7 @@
             <tr>
               <td>
                 {{ claim.claimed_by.full_name }}
-                {% if claim.notes %}<div class="claim-notes">{{ claim.notes }}</div>{% endif %}
+                {% if claim.notes %}<div class="claim-notes">{% trans "COI:" %} {{ claim.notes }}</div>{% endif %}
               </td>
               <td>{{ claim.date_claimed|date:"j M Y" }}</td>
               <td>
@@ -296,12 +197,19 @@
               </td>
               <td>
                 {% if claim.status == 'pending' and claimable_stage %}
-                <form method="POST" style="white-space:nowrap;">
-                  {% csrf_token %}
-                  <input type="hidden" name="claim_id" value="{{ claim.pk }}" />
-                  <button class="button small success" name="action" value="confirm">Confirm</button>
-                  <button class="button small alert" name="action" value="reject">Reject</button>
-                </form>
+                <div class="vae-claim-actions">
+                  <form method="POST" class="vae-inline-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="claim_id" value="{{ claim.pk }}" />
+                    <button class="button small success" name="action" value="confirm" aria-label="{% blocktrans with name=claim.claimed_by.full_name %}Confirm claim from {{ name }}{% endblocktrans %}">{% trans "Confirm" %}</button>
+                  </form>
+                  <button
+                    type="button"
+                    class="button small alert"
+                    data-open="reject-modal-{{ claim.pk }}"
+                    aria-label="{% blocktrans with name=claim.claimed_by.full_name %}Reject claim from {{ name }}{% endblocktrans %}"
+                  >{% trans "Reject" %}</button>
+                </div>
                 {% endif %}
               </td>
             </tr>
@@ -309,15 +217,42 @@
           </tbody>
         </table>
         {% else %}
-        <p class="vae-no-results">No claims yet.</p>
+        <p class="vae-no-results">{% trans "No claims yet." %}</p>
         {% endif %}
       </div>
     </div>
     {% endif %}
 
+    {% if is_editor and availability.available %}
+      {% include "vae_workflow/elements/editor_controls.html" %}
     {% endif %}
 
   </div>
 
 </div>
+
+{% if is_editor and claimable_stage %}
+{% for entry in pending_reject_forms %}
+  <div class="reveal" id="reject-modal-{{ entry.claim.pk }}" data-reveal
+       data-animation-in="slide-in-up" data-animation-out="slide-out-down">
+    <div class="card">
+      <div class="card-divider">
+        <h4>{% blocktrans with name=entry.claim.claimed_by.full_name %}Reject claim from {{ name }}{% endblocktrans %}</h4>
+      </div>
+      <div class="card-section">
+        <button class="close-button" data-close aria-label="{% trans 'Close' %}" type="button">
+          <span aria-hidden="true">&times;</span>
+        </button>
+        {% include "vae_workflow/elements/reject_form.html" with claim=entry.claim article=article reject_form=entry.reject_form %}
+      </div>
+    </div>
+  </div>
+{% endfor %}
+{% endif %}
+
+{% endblock %}
+
+{% block js %}
+{{ block.super }}
+<script src="https://unpkg.com/htmx.org@1.9.12"></script>
 {% endblock %}

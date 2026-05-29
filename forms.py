@@ -1,4 +1,5 @@
 from django import forms
+from tinymce.widgets import TinyMCE
 
 from plugins.vae_workflow import models
 
@@ -7,9 +8,23 @@ class ClaimForm(forms.ModelForm):
     class Meta:
         model = models.EditorClaim
         fields = ('notes',)
+        labels = {
+            'notes': 'Conflicts of Interest',
+        }
+        help_texts = {
+            'notes': (
+                'Please declare any potential conflicts of interest you may '
+                'have with this manuscript. Please add "None" if you do not '
+                'have any.'
+            ),
+        }
         widgets = {
             'notes': forms.Textarea(attrs={'rows': 3}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['notes'].required = True
 
 
 class AccountChoiceField(forms.ModelChoiceField):
@@ -64,3 +79,29 @@ class AddPoolMemberForm(forms.Form):
             ).exclude(
                 pk__in=already_in_pool,
             ).order_by('last_name', 'first_name')
+
+
+class RejectClaimForm(forms.Form):
+    message = forms.CharField(
+        widget=TinyMCE(attrs={'cols': 80, 'rows': 12}),
+        label='Rejection message',
+        help_text='This message will be emailed to the VAE.',
+    )
+
+
+class ChecklistStepForm(forms.ModelForm):
+    class Meta:
+        model = models.ChecklistStep
+        fields = ('label', 'help_text', 'link_type', 'order', 'active')
+        widgets = {
+            'help_text': forms.TextInput(),
+            'order': forms.NumberInput(attrs={'style': 'width:4rem'}),
+        }
+
+
+ChecklistStepFormSet = forms.modelformset_factory(
+    models.ChecklistStep,
+    form=ChecklistStepForm,
+    extra=1,
+    can_delete=True,
+)

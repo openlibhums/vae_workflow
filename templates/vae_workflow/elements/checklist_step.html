@@ -1,0 +1,75 @@
+{% load i18n %}
+<li id="checklist-step-{{ item.step.pk }}" class="vae-checklist-item{% if item.completed %} is-complete{% endif %}">
+  {% if item.auto_completed %}
+    <span class="vae-checklist-toggle is-auto" aria-label="{% blocktrans with label=item.step.label %}{{ label }} is tracked automatically{% endblocktrans %}">
+      {% if item.completed %}
+      <span class="fa fa-check-circle" aria-hidden="true"></span>
+      {% else %}
+      <span class="fa fa-circle-o" aria-hidden="true"></span>
+      {% endif %}
+    </span>
+  {% else %}
+    <form
+      hx-post="{% url 'vae_checklist_toggle' step_id=item.step.pk article_id=article.pk %}"
+      hx-target="#checklist-step-{{ item.step.pk }}"
+      hx-swap="outerHTML"
+      style="display:inline;"
+    >
+      {% csrf_token %}
+      <button
+        type="submit"
+        class="vae-checklist-toggle"
+        aria-pressed="{{ item.completed|yesno:'true,false' }}"
+        aria-label="{% if item.completed %}{% blocktrans with label=item.step.label %}Mark {{ label }} as incomplete{% endblocktrans %}{% else %}{% blocktrans with label=item.step.label %}Mark {{ label }} as complete{% endblocktrans %}{% endif %}"
+      >
+        {% if item.completed %}
+        <span class="fa fa-check-circle" aria-hidden="true"></span>
+        {% else %}
+        <span class="fa fa-circle-o" aria-hidden="true"></span>
+        {% endif %}
+      </button>
+    </form>
+  {% endif %}
+  <div class="vae-checklist-body">
+    <strong>{{ item.step.label }}</strong>
+    {% if item.step.help_text %}
+    <div class="vae-checklist-help">{{ item.step.help_text }}</div>
+    {% endif %}
+    {% if item.step.link_type == 'notify_vaes' %}
+    <div class="vae-checklist-action">
+      <form method="POST" action="{% url 'vae_article' article.pk %}" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" name="action" value="make_available"
+                class="vae-checklist-action-link"{% if not article.preprint %} disabled{% endif %}>
+          {% if item.completed %}{% trans "Send Reminder to VAEs" %}{% else %}{{ item.step.label }}{% endif %} &rarr;
+        </button>
+      </form>
+      {% if not article.preprint %}
+      <div class="vae-checklist-help">
+        <span class="fa fa-exclamation-triangle" aria-hidden="true"></span>
+        {% trans "A preprint must be created first." %}
+      </div>
+      {% endif %}
+    </div>
+    {% elif item.step.link_type == 'metadata' or item.step.link_type == 'files' or item.step.link_type == 'preprint' %}
+    <div class="vae-checklist-action">
+      <a href="{% url 'vae_checklist_track_click' step_id=item.step.pk article_id=article.pk %}"
+         target="_blank" rel="noopener"
+         onclick="this.closest('li').classList.add('is-complete'); var i=this.closest('li').querySelector('.vae-checklist-toggle .fa'); if(i){i.classList.remove('fa-circle-o'); i.classList.add('fa-check-circle');}">
+        {{ item.step.label }} &rarr;
+      </a>
+    </div>
+    {% elif item.link %}
+    <div class="vae-checklist-action">
+      <a href="{{ item.link }}"{% if item.link != '#assign-editor' and item.link != '#notify-status' %} target="_blank" rel="noopener"{% endif %}>
+        {{ item.step.label }} &rarr;
+      </a>
+    </div>
+    {% endif %}
+    {% if item.completed and item.completion.completed_by %}
+    <div class="vae-checklist-meta">
+      {% blocktrans with name=item.completion.completed_by.full_name date=item.completion.date_completed|date:"j M Y, H:i" %}Completed by {{ name }} on {{ date }}{% endblocktrans %}
+    </div>
+    {% endif %}
+  </div>
+</li>

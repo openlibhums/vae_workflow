@@ -4,7 +4,6 @@ from django.db.models import Q
 from django.shortcuts import render, get_object_or_404, redirect, reverse
 from django.urls import NoReverseMatch
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 
 from events import logic as event_logic
 from review import logic as review_logic
@@ -26,6 +25,11 @@ def manager(request):
     ).select_related('account', 'added_by')
 
     add_form = forms.AddPoolMemberForm(journal=request.journal)
+
+    logic.ensure_default_checklist_steps(request.journal)
+    checklist_formset = forms.ChecklistStepFormSet(
+        queryset=models.ChecklistStep.objects.filter(journal=request.journal),
+    )
 
     if request.method == 'POST':
         if 'add_member' in request.POST:
@@ -63,10 +67,36 @@ def manager(request):
                 messages.error(request, 'Pool member not found.')
             return redirect(reverse('vae_manager'))
 
+        elif 'save_checklist' in request.POST:
+            checklist_formset = forms.ChecklistStepFormSet(
+                request.POST,
+                queryset=models.ChecklistStep.objects.filter(
+                    journal=request.journal,
+                ),
+            )
+            if checklist_formset.is_valid():
+                steps = checklist_formset.save(commit=False)
+                for step in steps:
+                    step.journal = request.journal
+                    step.save()
+                for step in checklist_formset.deleted_objects:
+                    step.delete()
+                messages.success(request, 'Checklist steps updated.')
+                return redirect(reverse('vae_manager'))
+
+        elif 'reset_checklist' in request.POST:
+            models.ChecklistStep.objects.filter(
+                journal=request.journal,
+            ).delete()
+            logic.ensure_default_checklist_steps(request.journal)
+            messages.success(request, 'Checklist steps reset to defaults.')
+            return redirect(reverse('vae_manager'))
+
     template = 'vae_workflow/manager.html'
     context = {
         'pool_members': pool_members,
         'add_form': add_form,
+        'checklist_formset': checklist_formset,
     }
     return render(request, template, context)
 
@@ -247,6 +277,9 @@ def article(request, article_id):
         article=article_obj,
         journal=request.journal,
     )
+    editor_assignments = review_models.EditorAssignment.objects.filter(
+        article=article_obj,
+    ).select_related('editor').order_by('assigned')
 
     claim_form = forms.ClaimForm()
 
@@ -314,7 +347,6 @@ def article(request, article_id):
                     pk=claim_id,
                     status='pending',
                 )
-                # Collect other pending claimants before confirm_claim rejects them
                 other_pending = list(
                     article_obj.vae_claims.filter(status='pending').exclude(pk=claim_to_confirm.pk)
                 )
@@ -325,21 +357,17 @@ def article(request, article_id):
                     logic.notify_rejected(request, other)
                 messages.success(
                     request,
-                    '{} confirmed as handling editor. Article advancing to next stage.'.format(
+                    '{} confirmed as handling editor. Article moved to review.'.format(
                         claim_to_confirm.claimed_by.full_name()
                     ),
                 )
-                # Advance the workflow
-                kwargs = {
-                    'handshake_url': 'vae_articles',
-                    'request': request,
-                    'article': article_obj,
-                    'switch_stage': True,
-                }
                 return event_logic.Events.raise_event(
                     event_logic.Events.ON_WORKFLOW_ELEMENT_COMPLETE,
                     task_object=article_obj,
-                    **kwargs,
+                    handshake_url='vae_articles',
+                    request=request,
+                    article=article_obj,
+                    switch_stage=True,
                 )
             except models.EditorClaim.DoesNotExist:
                 messages.error(request, 'Claim not found.')
@@ -405,8 +433,16 @@ def article(request, article_id):
                     pk=claim_id,
                     status='pending',
                 )
+                reject_message = request.POST.get(
+                    'reject{}-message'.format(claim_id),
+                    request.POST.get('message', ''),
+                ).strip()
                 claim_to_reject.resolve('rejected', request.user)
-                logic.notify_rejected(request, claim_to_reject)
+                logic.notify_rejected(
+                    request,
+                    claim_to_reject,
+                    custom_message=reject_message or None,
+                )
                 messages.success(
                     request,
                     'Claim from {} rejected.'.format(claim_to_reject.claimed_by.full_name()),
@@ -425,6 +461,37 @@ def article(request, article_id):
         except NoReverseMatch:
             pass
 
+    checklist_items = logic.get_checklist_with_completions(
+        request.journal,
+        article_obj,
+        isolinear_url=isolinear_url,
+    )
+
+    pending_reject_forms = []
+    if is_editor:
+        from utils import render_template, setting_handler
+        pending_claims = claims.filter(status='pending')
+        if pending_claims.exists():
+            template_text = setting_handler.get_setting(
+                'plugin:vae_workflow',
+                'vae_rejected_notification',
+                request.journal,
+            ).processed_value
+            for pending_claim in pending_claims:
+                default_message = render_template.get_message_content(
+                    request,
+                    {'claim': pending_claim},
+                    template_text,
+                    template_is_setting=True,
+                )
+                pending_reject_forms.append({
+                    'claim': pending_claim,
+                    'reject_form': forms.RejectClaimForm(
+                        initial={'message': default_message},
+                        prefix='reject{}'.format(pending_claim.pk),
+                    ),
+                })
+
     template = 'vae_workflow/article.html'
     context = {
         'article': article_obj,
@@ -440,7 +507,10 @@ def article(request, article_id):
         'is_editor': is_editor,
         'can_assign_editor': can_assign_editor,
         'assign_editor_form': assign_editor_form,
+        'editor_assignments': editor_assignments,
         'isolinear_url': isolinear_url,
+        'checklist_items': checklist_items,
+        'pending_reject_forms': pending_reject_forms,
     }
     return render(request, template, context)
 

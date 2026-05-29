@@ -1,0 +1,20 @@
+{% load i18n %}
+<div class="box" id="notify-status"
+     hx-get="{% url 'vae_checklist_refresh' article_id=article.pk %}"
+     hx-trigger="visibilitychange[document.visibilityState=='visible'] from:document"
+     hx-swap="outerHTML">
+  <div class="title-area"><h2>{% trans "Pre-claim Checklist" %}</h2></div>
+  <div class="content">
+    <p>{% trans "Complete the following steps before making this article available to the VAE pool." %}</p>
+    <ol class="vae-checklist" role="list" aria-label="{% trans 'Pre-claim checklist' %}">
+      {% for item in checklist_items %}
+        {% include "vae_workflow/elements/checklist_step.html" with item=item article=article %}
+      {% endfor %}
+    </ol>
+    {% if availability.date_last_notified %}
+    <p class="vae-notify-meta">
+      {% blocktrans with date=availability.date_last_notified|date:"j F Y, H:i" %}Last notified: {{ date }}{% endblocktrans %}
+    </p>
+    {% endif %}
+  </div>
+</div>

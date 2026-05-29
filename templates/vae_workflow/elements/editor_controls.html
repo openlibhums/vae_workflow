@@ -1,0 +1,49 @@
+{% load i18n %}
+{% include "vae_workflow/elements/checklist_box.html" %}
+
+{% if can_assign_editor %}
+<div class="box" id="assign-editor">
+  <div class="title-area"><h2>{% trans "Assign Editor" %}</h2></div>
+  <div class="content">
+    <p class="help-text">{% trans "An article can have more than one assigned editor. Use this form to add additional editors as needed." %}</p>
+    {% if editor_assignments %}
+    <div class="callout primary">
+      <p><strong>{% blocktrans count counter=editor_assignments|length %}Currently assigned editor:{% plural %}Currently assigned editors:{% endblocktrans %}</strong></p>
+      <ul class="vae-editor-list">
+        {% for ea in editor_assignments %}
+        <li><span class="fa fa-user" aria-hidden="true"></span> {{ ea.editor.full_name }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+    {% if assign_editor_form.fields.editor.queryset.exists %}
+    <div class="vae-action-group">
+      <form method="POST">
+        {% csrf_token %}
+        {{ assign_editor_form.as_p }}
+        <button class="button success expanded" name="action" value="assign_editor">
+          <span class="fa fa-user-plus" aria-hidden="true"></span> {% if editor_assignments %}{% trans "Assign Another Editor" %}{% else %}{% trans "Assign Editor" %}{% endif %}
+        </button>
+      </form>
+    </div>
+    {% elif not editor_assignments %}
+    <p>{% trans "No additional editors available to assign." %}</p>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<div class="box vae-danger-zone">
+  <div class="title-area"><h2>{% trans "Reject / Revise" %}</h2></div>
+  <div class="content">
+    <p>{% trans "If this article is not suitable for the VAE pool:" %}</p>
+    <div class="vae-action-group">
+      <a href="{% url 'review_decision' article.pk 'decline' %}" class="button alert expanded">
+        <span class="fa fa-times-circle" aria-hidden="true"></span> {% trans "Reject Article" %}
+      </a>
+      <a href="{% url 'review_request_revisions' article.pk %}" class="button warning expanded">
+        <span class="fa fa-pencil" aria-hidden="true"></span> {% trans "Request Pre-Review Revision" %}
+      </a>
+    </div>
+  </div>
+</div>
