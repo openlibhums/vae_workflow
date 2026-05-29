@@ -1,0 +1,16 @@
+{% load foundation i18n %}
+<form method="POST" action="{% url 'vae_article' article.pk %}">
+  {% csrf_token %}
+  <input type="hidden" name="claim_id" value="{{ claim.pk }}" />
+  <input type="hidden" name="action" value="reject" />
+  <p class="vae-reject-help">{% trans "The message below will be emailed to the VAE. Edit it as needed before sending." %}</p>
+  {{ reject_form|foundation }}
+  <div class="vae-action-group vae-reject-actions">
+    <button type="submit" class="button alert">
+      <span class="fa fa-times-circle" aria-hidden="true"></span> {% trans "Reject and Send" %}
+    </button>
+    <button type="button" class="button secondary" data-close>
+      {% trans "Cancel" %}
+    </button>
+  </div>
+</form>

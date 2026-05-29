@@ -1,5 +1,5 @@
 {% extends "admin/core/base.html" %}
-{% load foundation static %}
+{% load foundation static i18n %}
 
 {% block css %}{{ block.super }}<link rel="stylesheet" href="{% static 'admin/css/vae_workflow.css' %}">{% endblock %}
 
@@ -40,34 +40,81 @@
     </div>
   </div>
 
-  {# ── Right: About ── #}
+  {# Right column #}
   <div class="large-5 columns">
+
     <div class="box">
-      <div class="title-area"><h2>How It Works</h2></div>
+      <div class="title-area"><h2>{% trans "Pre-claim Checklist Steps" %}</h2></div>
+      <div class="content">
+        <p>{% trans "Configure the checklist steps that editors must complete before releasing an article to the VAE pool. Drag to reorder, or set the order number manually." %}</p>
+        <form method="POST">
+          {% csrf_token %}
+          {{ checklist_formset.management_form }}
+          <table class="vae-checklist-formset-table">
+            <thead>
+              <tr>
+                <th>{% trans "Label" %}</th>
+                <th>{% trans "Help Text" %}</th>
+                <th>{% trans "Link" %}</th>
+                <th>{% trans "Order" %}</th>
+                <th>{% trans "Active" %}</th>
+                <th>{% trans "Delete" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for form in checklist_formset %}
+              <tr>
+                <td>{{ form.id }}{{ form.label }}</td>
+                <td>{{ form.help_text }}</td>
+                <td>{{ form.link_type }}</td>
+                <td>{{ form.order }}</td>
+                <td>{{ form.active }}</td>
+                <td>{{ form.DELETE }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <button type="submit" name="save_checklist" class="button success" value="1">
+            <span class="fa fa-save" aria-hidden="true"></span> {% trans "Save Checklist" %}
+          </button>
+        </form>
+        <form method="POST" style="margin-top:0.5rem;"
+              onsubmit="return confirm('{% trans "Reset all checklist steps to the defaults? Any customisations will be lost." %}')">
+          {% csrf_token %}
+          <button type="submit" name="reset_checklist" class="button secondary" value="1">
+            <span class="fa fa-refresh" aria-hidden="true"></span> {% trans "Reset to Defaults" %}
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="box">
+      <div class="title-area"><h2>{% trans "How It Works" %}</h2></div>
       <div class="content">
         <ol class="vae-how-list">
           <li>
             <span class="step-num">1</span>
-            <span>Add section editors to the VAE pool using the search on the left.</span>
+            <span>{% trans "Add section editors to the VAE pool using the search on the left." %}</span>
           </li>
           <li>
             <span class="step-num">2</span>
-            <span>When an article enters the <strong>VAE Claiming</strong> stage, pool members can browse and claim articles they wish to handle.</span>
+            <span>{% blocktrans %}When an article enters the <strong>VAE Claiming</strong> stage, pool members can browse and claim articles they wish to handle.{% endblocktrans %}</span>
           </li>
           <li>
             <span class="step-num">3</span>
-            <span>The handling editor reviews all claims, confirms one, and the VAE is assigned as section editor.</span>
+            <span>{% trans "The handling editor reviews all claims, confirms one, and the VAE is assigned as section editor." %}</span>
           </li>
           <li>
             <span class="step-num">4</span>
-            <span>On revision, the article is fast-tracked back to the same VAE.</span>
+            <span>{% trans "On revision, the article is fast-tracked back to the same VAE." %}</span>
           </li>
         </ol>
         <a href="{% url 'vae_articles' %}" class="button expanded">
-          <span class="fa fa-list"></span> View Articles Awaiting a VAE
+          <span class="fa fa-list" aria-hidden="true"></span> {% trans "View Articles Awaiting a VAE" %}
         </a>
       </div>
     </div>
+
   </div>
 
 </div>

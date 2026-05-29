@@ -72,9 +72,25 @@ def notify_confirmed(request, claim):
     _send_email(request, 'vae_confirmed_notification', claim.claimed_by.email, claim)
 
 
-def notify_rejected(request, claim):
+def notify_rejected(request, claim, custom_message=None):
     """Email the VAE when their claim is rejected."""
-    _send_email(request, 'vae_rejected_notification', claim.claimed_by.email, claim)
+    if custom_message:
+        log_dict = {
+            'level': 'Info',
+            'action_text': 'VAE Workflow: vae_rejected_notification',
+            'types': 'VAE Workflow',
+            'actor': request.user,
+            'target': claim.article,
+        }
+        notify_helpers.send_email_with_body_from_user(
+            request=request,
+            subject='[{}] VAE Claim — {}'.format(request.journal.code, claim.article.title),
+            to=claim.claimed_by.email,
+            body=custom_message,
+            log_dict=log_dict,
+        )
+    else:
+        _send_email(request, 'vae_rejected_notification', claim.claimed_by.email, claim)
 
 
 def allow_multiple_claims(journal):
@@ -202,6 +218,11 @@ def notify_vaes_pool(request, article):
         target=article,
     )
 
+    availability = getattr(article, 'pool_availability', None)
+    if availability:
+        availability.date_last_notified = timezone.now()
+        availability.save(update_fields=['date_last_notified'])
+
 
 def confirmed_claim(article):
     """Return the confirmed claim for an article, if one exists."""
@@ -240,7 +261,79 @@ def make_available_for_pool(article, editor, request):
     )
     availability.available = True
     availability.made_available_by = editor
-    availability.date_made_available = timezone.now()
+    now = timezone.now()
+    availability.date_made_available = now
+    availability.date_last_notified = now
     availability.save()
     notify_vaes_pool(request, article)
     return availability
+
+
+DEFAULT_CHECKLIST_STEPS = [
+    {'label': 'Review metadata', 'link_type': 'metadata', 'order': 1},
+    {'label': 'Review files', 'link_type': 'files', 'order': 2},
+    {'label': 'Assign Editor', 'link_type': 'assign_editor', 'order': 3},
+    {'label': 'Create preprint', 'link_type': 'preprint', 'order': 4},
+    {'label': 'Make Available for VAE Pool', 'link_type': 'notify_vaes', 'order': 5},
+]
+
+
+def ensure_default_checklist_steps(journal):
+    if not models.ChecklistStep.objects.filter(journal=journal).exists():
+        for step_data in DEFAULT_CHECKLIST_STEPS:
+            models.ChecklistStep.objects.create(journal=journal, **step_data)
+    return models.ChecklistStep.objects.filter(journal=journal, active=True)
+
+
+def resolve_step_link(step, article, isolinear_url=None):
+    from django.urls import reverse
+    link_type = step.link_type
+    if link_type == 'metadata':
+        return reverse('edit_metadata', args=[article.pk])
+    elif link_type == 'files':
+        return reverse('document_management', args=[article.pk])
+    elif link_type == 'assign_editor':
+        return '#assign-editor'
+    elif link_type == 'preprint':
+        return isolinear_url or reverse('document_management', args=[article.pk])
+    elif link_type == 'notify_vaes':
+        return '#notify-status'
+    return None
+
+
+def get_step_auto_completed(step, article):
+    """Return True/False if completion is system-derived, or None if manual."""
+    if step.link_type == 'assign_editor':
+        from review.models import EditorAssignment
+        return EditorAssignment.objects.filter(article=article).exists()
+    if step.link_type == 'notify_vaes':
+        availability = getattr(article, 'pool_availability', None)
+        return bool(availability and availability.available)
+    return None
+
+
+def get_checklist_with_completions(journal, article, isolinear_url=None):
+    steps = ensure_default_checklist_steps(journal)
+    completions = {
+        c.step_id: c
+        for c in models.ChecklistCompletion.objects.filter(
+            article=article,
+            step__in=steps,
+        ).select_related('completed_by')
+    }
+    result = []
+    for step in steps:
+        completion = completions.get(step.pk)
+        auto = get_step_auto_completed(step, article)
+        if auto is not None:
+            completed = auto
+        else:
+            completed = completion.completed if completion else False
+        result.append({
+            'step': step,
+            'completion': completion,
+            'completed': completed,
+            'auto_completed': auto is not None,
+            'link': resolve_step_link(step, article, isolinear_url),
+        })
+    return result

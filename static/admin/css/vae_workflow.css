@@ -274,13 +274,13 @@
 }
 .vae-section-heading:first-of-type { margin-top: 0; }
 
-/* ── Pre-claim checklist ── */
+/* ── Pre-claim checklist (HTMX-driven) ── */
 .vae-checklist {
   list-style: none;
-  margin: 0 0 .5rem;
+  margin: 0 0 1rem;
   padding: 0;
 }
-.vae-checklist li {
+.vae-checklist-item {
   display: flex;
   gap: .75rem;
   padding: .75rem 0;
@@ -288,24 +288,106 @@
   font-size: .9rem;
   line-height: 1.5;
   color: #333;
+  transition: opacity .15s;
 }
-.vae-checklist li:last-child { border-bottom: none; }
-.vae-checklist-num {
+.vae-checklist-item:last-child { border-bottom: none; }
+.vae-checklist-item.is-complete { opacity: .65; }
+.vae-checklist-item.is-complete .vae-checklist-body strong {
+  text-decoration: line-through;
+  color: #888;
+}
+.vae-checklist-toggle {
   flex-shrink: 0;
-  width: 1.6rem;
-  height: 1.6rem;
-  border-radius: 50%;
-  background: #fff3e0;
-  color: #e65100;
-  font-size: .72rem;
-  font-weight: 700;
+  width: 1.75rem;
+  height: 1.75rem;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: .1rem;
+  border-radius: 50%;
+  transition: background .15s;
 }
+.vae-checklist-toggle:hover { background: #f0f0f0; }
+.vae-checklist-toggle:focus-visible {
+  outline: 2px solid #2199e8;
+  outline-offset: 2px;
+}
+.vae-checklist-toggle .fa { font-size: 1.1rem; }
+.vae-checklist-item:not(.is-complete) .vae-checklist-toggle .fa { color: #ccc; }
+.vae-checklist-item.is-complete .vae-checklist-toggle .fa { color: #43a047; }
+.vae-checklist-body { flex: 1; }
+.vae-checklist-help { font-size: .8rem; color: #888; margin-top: .15rem; }
 .vae-checklist-action { margin-top: .2rem; font-size: .82rem; }
-.vae-checklist-action a { color: #2199e8; }
+.vae-checklist-action a,
+.vae-checklist-action-link {
+  color: #2199e8;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: none;
+}
+.vae-checklist-action a:hover,
+.vae-checklist-action-link:hover:not(:disabled) {
+  text-decoration: underline;
+  cursor: pointer;
+}
+.vae-checklist-action-link:disabled {
+  color: #aaa;
+  cursor: not-allowed;
+}
+
+.vae-claim-status + .help-text {
+  margin-top: 1rem;
+}
+.vae-checklist-meta { font-size: .75rem; color: #aaa; margin-top: .25rem; }
+
+/* ── Claim action buttons (confirm/reject inline) ── */
+.vae-claim-actions {
+  display: flex;
+  gap: .35rem;
+  align-items: center;
+  white-space: nowrap;
+}
+.vae-claim-actions form { margin: 0; }
+.vae-inline-form { display: inline; }
+
+/* ── Reject form panel (HTMX-loaded) ── */
+.vae-reject-form-panel {
+  margin-top: .75rem;
+  padding: 1rem 1.25rem;
+  background: #fef8f6;
+  border: 1px solid #f5c6cb;
+  border-radius: 3px;
+}
+.vae-reject-form-panel h4 {
+  font-size: .9rem;
+  font-weight: 700;
+  margin: 0 0 .5rem;
+  color: #c62828;
+}
+.vae-reject-help { font-size: .82rem; color: #666; margin-bottom: .75rem; }
+.vae-reject-actions {
+  flex-direction: row !important;
+  gap: .5rem;
+  margin-top: .75rem;
+}
+.vae-reject-actions .button { margin: 0; }
+
+/* ── Notification meta ── */
+.vae-notify-meta {
+  font-size: .8rem;
+  color: #888;
+  margin-top: .35rem;
+  margin-bottom: 0;
+}
 
 /* ── Danger zone box ── */
 .vae-danger-zone { border-top: 3px solid #c62828; }
@@ -339,4 +421,41 @@
   padding: 1.5rem;
   text-align: center;
   color: #777;
+}
+
+/* ── Checklist formset table (manager) ── */
+.vae-checklist-formset-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .85rem;
+  margin-bottom: 1rem;
+}
+.vae-checklist-formset-table thead th {
+  padding: .5rem .5rem;
+  text-align: left;
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #888;
+  border-bottom: 2px solid #e8e8e8;
+  white-space: nowrap;
+}
+.vae-checklist-formset-table tbody tr { border-bottom: 1px solid #f4f4f4; }
+.vae-checklist-formset-table tbody td {
+  padding: .5rem .5rem;
+  vertical-align: middle;
+}
+.vae-checklist-formset-table input[type="text"],
+.vae-checklist-formset-table select {
+  margin: 0;
+  font-size: .85rem;
+}
+.vae-checklist-formset-table input[type="number"] {
+  width: 4rem;
+  margin: 0;
+  font-size: .85rem;
+}
+.vae-checklist-formset-table input[type="checkbox"] {
+  margin: 0;
 }

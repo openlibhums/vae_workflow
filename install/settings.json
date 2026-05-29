@@ -56,7 +56,7 @@
       "is_translatable": true
     },
     "value": {
-      "default": "<p>Dear {{ claim.claimed_by.full_name }},</p><p>Your claim on article #{{ claim.article.pk }}: <em>{{ claim.article.title }}</em> has been confirmed. You have been assigned as section editor for this article.</p><p>Regards,<br />{{ request.journal.name }}</p>"
+      "default": "<p>Dear {{ claim.claimed_by.full_name }},</p><p>Your claim on article #{{ claim.article.pk }}: <em>{{ claim.article.title }}</em> has been confirmed. You have been assigned as handling editor for this article.</p><p>You can view the article and begin the review process here: <a href=\"{% journal_url 'review_in_review' claim.article.pk %}\">{% journal_url 'review_in_review' claim.article.pk %}</a></p><p>You may rescind your claim at any time from the VAE workflow page, which will remove you as handling editor and reopen the article for claiming.</p><p>Regards,<br />{{ request.journal.name }}</p>"
     }
   },
   {
