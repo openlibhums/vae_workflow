@@ -164,3 +164,57 @@ class TestUserInVaePoolTag(TestCase):
 
     def test_member_on_other_journal_returns_false(self):
         self.assertFalse(logic.user_is_in_pool(self.pool_member, self.journal_two))
+
+
+@override_settings(URL_CONFIG="domain")
+class TestDashboardCounts(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        helpers.create_press()
+        cls.journal_one, cls.journal_two = helpers.create_journals()
+        helpers.create_roles(["editor", "author"])
+        vae_plugin_settings.install()
+
+        cls.awaiting_article = helpers.create_article(
+            cls.journal_one,
+            title="Awaiting Release",
+        )
+        cls.awaiting_article.stage = vae_plugin_settings.STAGE
+        cls.awaiting_article.save()
+        models.ArticlePoolAvailability.objects.get_or_create(
+            article=cls.awaiting_article,
+            defaults={"available": False},
+        )
+
+        cls.available_article = helpers.create_article(
+            cls.journal_one,
+            title="Available to Claim",
+        )
+        cls.available_article.stage = vae_plugin_settings.STAGE
+        cls.available_article.save()
+        availability, _ = models.ArticlePoolAvailability.objects.get_or_create(
+            article=cls.available_article,
+        )
+        availability.available = True
+        availability.save()
+
+        cls.confirmed_article = helpers.create_article(
+            cls.journal_one,
+            title="Confirmed Article",
+        )
+        cls.confirmed_user = helpers.create_user(
+            "confirmed-vae@example.com",
+            journal=cls.journal_one,
+            is_active=True,
+        )
+        models.EditorClaim.objects.create(
+            article=cls.confirmed_article,
+            claimed_by=cls.confirmed_user,
+            status="confirmed",
+        )
+
+    def test_dashboard_counts_returns_expected_keys(self):
+        counts = views.dashboard_counts(self.journal_one)
+        self.assertEqual(counts["awaiting_release"], 1)
+        self.assertEqual(counts["available_to_claim"], 1)
+        self.assertEqual(counts["confirmed_claims"], 1)

@@ -190,3 +190,76 @@ class TestVAEAssignEditor(TestCase):
                 editor=non_editor,
             ).exists(),
         )
+
+
+@override_settings(URL_CONFIG="domain")
+class TestEditorAssignmentContext(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        helpers.create_press()
+        cls.journal_one, cls.journal_two = helpers.create_journals()
+        helpers.create_roles(
+            ["editor", "section-editor", "journal-manager", "author"],
+        )
+        vae_plugin_settings.install()
+        clear_url_caches()
+        importlib.reload(importlib.import_module(settings.ROOT_URLCONF))
+        importlib.reload(importlib.import_module("core.include_urls"))
+
+        cls.editor = helpers.create_editor(cls.journal_one)
+        cls.article = helpers.create_article(
+            cls.journal_one,
+            title="Editor Assignment Context",
+            stage=vae_plugin_settings.STAGE,
+        )
+        cls.assigned_editor = helpers.create_editor(
+            cls.journal_one,
+            email="assigned-editor-ctx@example.com",
+        )
+        cls.assignment = helpers.create_editor_assignment(
+            cls.article,
+            cls.assigned_editor,
+        )
+
+    def test_article_view_includes_editor_assignments(self):
+        self.client.force_login(self.editor)
+        response = self.client.get(
+            reverse("vae_article", kwargs={"article_id": self.article.pk}),
+            SERVER_NAME=self.journal_one.domain,
+        )
+        self.assertEqual(response.status_code, 200)
+        assignments = list(response.context["editor_assignments"])
+        self.assertEqual(len(assignments), 1)
+        self.assertEqual(assignments[0].editor, self.assigned_editor)
+
+    def test_article_view_lists_multiple_editor_assignments(self):
+        second_editor = helpers.create_editor(
+            self.journal_one,
+            email="second-editor-ctx@example.com",
+        )
+        helpers.create_editor_assignment(self.article, second_editor)
+        self.client.force_login(self.editor)
+        response = self.client.get(
+            reverse("vae_article", kwargs={"article_id": self.article.pk}),
+            SERVER_NAME=self.journal_one.domain,
+        )
+        self.assertEqual(response.status_code, 200)
+        assigned_editors = [
+            ea.editor for ea in response.context["editor_assignments"]
+        ]
+        self.assertIn(self.assigned_editor, assigned_editors)
+        self.assertIn(second_editor, assigned_editors)
+
+    def test_article_view_editor_assignments_empty_when_unassigned(self):
+        unassigned_article = helpers.create_article(
+            self.journal_one,
+            title="No Editor Assigned",
+            stage=vae_plugin_settings.STAGE,
+        )
+        self.client.force_login(self.editor)
+        response = self.client.get(
+            reverse("vae_article", kwargs={"article_id": unassigned_article.pk}),
+            SERVER_NAME=self.journal_one.domain,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(list(response.context["editor_assignments"]))

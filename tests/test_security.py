@@ -259,3 +259,67 @@ class TestArticlesViewIntegration(TestCase):
             SERVER_NAME=self.journal_one.domain,
         )
         self.assertEqual(response.status_code, 200)
+
+
+@override_settings(URL_CONFIG="domain")
+class TestHiddenRejectedVAENames(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        helpers.create_press()
+        cls.journal_one, cls.journal_two = helpers.create_journals()
+        helpers.create_roles(
+            ["editor", "section-editor", "journal-manager", "author"],
+        )
+        vae_plugin_settings.install()
+        clear_url_caches()
+        importlib.reload(importlib.import_module(settings.ROOT_URLCONF))
+        importlib.reload(importlib.import_module("core.include_urls"))
+
+        cls.editor = helpers.create_editor(cls.journal_one)
+        cls.vae_pool_member = helpers.create_section_editor(
+            cls.journal_one,
+            email="vae-hidden-reject@example.com",
+        )
+        models.VAEPoolMember.objects.create(
+            journal=cls.journal_one,
+            account=cls.vae_pool_member,
+        )
+        cls.rejected_vae = helpers.create_user(
+            "rejected-vae@example.com",
+            journal=cls.journal_one,
+            is_active=True,
+            first_name="RejectedFirst",
+            last_name="RejectedLast",
+        )
+        cls.article = helpers.create_article(
+            cls.journal_one,
+            title="Hidden Rejected Article",
+            stage=vae_plugin_settings.STAGE,
+        )
+        models.ArticlePoolAvailability.objects.create(
+            article=cls.article,
+            available=True,
+        )
+        models.EditorClaim.objects.create(
+            article=cls.article,
+            claimed_by=cls.rejected_vae,
+            status="rejected",
+        )
+
+    def test_non_editor_vae_does_not_see_rejected_names(self):
+        self.client.force_login(self.vae_pool_member)
+        response = self.client.get(
+            reverse("vae_articles"),
+            SERVER_NAME=self.journal_one.domain,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "RejectedFirst")
+
+    def test_editor_sees_rejected_claim_names(self):
+        self.client.force_login(self.editor)
+        response = self.client.get(
+            reverse("vae_articles"),
+            SERVER_NAME=self.journal_one.domain,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "RejectedFirst")
