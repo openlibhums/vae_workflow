@@ -237,3 +237,67 @@ class TestArticlesViewSplit(TestCase):
         self.assertNotIn(self.unassigned_article.pk, claiming_ids)
         self.assertIn(self.claiming_article.pk, claiming_ids)
         self.assertNotIn(self.claiming_article.pk, unassigned_ids)
+
+
+@override_settings(URL_CONFIG="domain")
+class TestMakeAvailablePreprintGuard(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        helpers.create_press()
+        cls.journal_one, cls.journal_two = helpers.create_journals()
+        helpers.create_roles(["editor", "author"])
+        vae_plugin_settings.install()
+        clear_url_caches()
+        importlib.reload(importlib.import_module(settings.ROOT_URLCONF))
+        importlib.reload(importlib.import_module("core.include_urls"))
+
+        cls.editor = helpers.create_editor(cls.journal_one)
+        cls.assigned_editor = helpers.create_editor(
+            cls.journal_one,
+            email="assigned-preprint@example.com",
+        )
+        cls.article = helpers.create_article(
+            cls.journal_one,
+            title="Preprint Guard Article",
+        )
+        helpers.create_editor_assignment(cls.article, cls.assigned_editor)
+
+    def article_url(self):
+        return reverse("vae_article", kwargs={"article_id": self.article.pk})
+
+    @mock.patch("plugins.vae_workflow.views.logic.has_preprint", return_value=False)
+    def test_make_available_blocked_without_preprint(self, mock_has):
+        with mock.patch(
+            "plugins.vae_workflow.logic.notify_helpers.send_email_with_body_from_user",
+        ) as mock_email:
+            self.client.force_login(self.editor)
+            response = self.client.post(
+                self.article_url(),
+                data={"action": "make_available"},
+                SERVER_NAME=self.journal_one.domain,
+            )
+        self.assertEqual(response.status_code, 302)
+        availability = models.ArticlePoolAvailability.objects.get(
+            article=self.article,
+        )
+        self.assertFalse(availability.available)
+        mock_email.assert_not_called()
+
+    @mock.patch("plugins.vae_workflow.views.logic.has_preprint", return_value=True)
+    @mock.patch("plugins.vae_workflow.logic.has_preprint", return_value=True)
+    @mock.patch("plugins.vae_workflow.logic.notify_vaes_pool")
+    def test_make_available_succeeds_with_preprint(
+        self, mock_notify, mock_logic_has, mock_view_has,
+    ):
+        self.client.force_login(self.editor)
+        response = self.client.post(
+            self.article_url(),
+            data={"action": "make_available"},
+            SERVER_NAME=self.journal_one.domain,
+        )
+        self.assertEqual(response.status_code, 302)
+        availability = models.ArticlePoolAvailability.objects.get(
+            article=self.article,
+        )
+        self.assertTrue(availability.available)
+        mock_notify.assert_called_once()
