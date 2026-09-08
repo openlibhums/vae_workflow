@@ -1,5 +1,13 @@
 from django import forms
-from tinymce.widgets import TinyMCE
+
+# TinyMCE is not part of Janeway's requirements; fall back to Janeway's
+# stock Summernote editor on installs that do not carry it.
+try:
+    from tinymce.widgets import TinyMCE
+    RICH_TEXT_WIDGET = TinyMCE(attrs={'cols': 80, 'rows': 12})
+except ImportError:
+    from django_summernote.widgets import SummernoteWidget
+    RICH_TEXT_WIDGET = SummernoteWidget()
 
 from plugins.vae_workflow import models
 
@@ -83,7 +91,7 @@ class AddPoolMemberForm(forms.Form):
 
 class RejectClaimForm(forms.Form):
     message = forms.CharField(
-        widget=TinyMCE(attrs={'cols': 80, 'rows': 12}),
+        widget=RICH_TEXT_WIDGET,
         label='Rejection message',
         help_text='This message will be emailed to the VAE.',
     )
