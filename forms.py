@@ -1,5 +1,8 @@
 from django import forms
-from tinymce.widgets import TinyMCE
+try:
+    from tinymce.widgets import TinyMCE as RichTextWidget
+except ImportError:
+    from django_summernote.widgets import SummernoteWidget as RichTextWidget
 
 from plugins.vae_workflow import models
 
@@ -83,7 +86,7 @@ class AddPoolMemberForm(forms.Form):
 
 class RejectClaimForm(forms.Form):
     message = forms.CharField(
-        widget=TinyMCE(attrs={'cols': 80, 'rows': 12}),
+        widget=RichTextWidget(attrs={'cols': 80, 'rows': 12}),
         label='Rejection message',
         help_text='This message will be emailed to the VAE.',
     )
