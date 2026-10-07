@@ -287,6 +287,7 @@ def article(request, article_id):
         action = request.POST.get('action')
 
         if action == 'advance' and existing_claim and in_claiming_stage:
+            logic.ensure_review_round(article_obj)
             messages.success(
                 request,
                 'Article advancing to next stage with {} as handling editor.'.format(
