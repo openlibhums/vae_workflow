@@ -151,10 +151,25 @@ def rescind_confirmed_claim(claim, rescinded_by):
     ).delete()
 
 
+def ensure_review_round(article):
+    """
+    Create the first review round, as core's move_to_review does, so
+    review views that look up the latest round do not fail.
+    """
+    from review.models import ReviewRound
+
+    review_round, _ = ReviewRound.objects.get_or_create(
+        article=article,
+        round_number=1,
+    )
+    return review_round
+
+
 def confirm_claim(claim, confirmed_by):
     """
     Confirm a claim: reject all other pending claims for the same article,
-    assign the VAE as section editor, and return the claim.
+    assign the VAE as section editor, create the first review round and
+    return the claim.
     """
     from review.models import EditorAssignment
 
@@ -177,6 +192,7 @@ def confirm_claim(claim, confirmed_by):
         editor=claim.claimed_by,
         defaults={'editor_type': 'section-editor'},
     )
+    ensure_review_round(article)
 
     return claim
 
