@@ -252,7 +252,8 @@ def return_to_vae_after_pre_review_revision(revision, request=None, **kwargs):
     "Request Pre-Review Revision" uses core's revision request, which moves
     the article to Under Revision. When the author submits, put the article
     back in the VAE stage it left, as long as the VAE stage was the last
-    workflow element it entered and no VAE has claimed it since.
+    workflow element it entered, no VAE has claimed it since and it has
+    no review assignments.
     """
     from core.models import WorkflowLog
     from submission.models import STAGE_UNDER_REVISION
@@ -260,6 +261,11 @@ def return_to_vae_after_pre_review_revision(revision, request=None, **kwargs):
 
     article = revision.article
     if article.stage != STAGE_UNDER_REVISION or confirmed_claim(article):
+        return
+
+    # Articles taken into review through core's review screens have
+    # reviewers but no VAE claim or review workflow log entry.
+    if article.reviewassignment_set.exists():
         return
 
     last_log = WorkflowLog.objects.filter(

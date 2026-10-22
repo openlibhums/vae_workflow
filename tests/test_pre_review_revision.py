@@ -90,6 +90,19 @@ class TestReturnToVAEAfterPreReviewRevision(TestCase):
             submission_models.STAGE_UNDER_REVISION,
         )
 
+    def test_article_with_review_assignments_stays_in_review(self):
+        helpers.create_review_assignment(
+            journal=self.journal_one,
+            article=self.article,
+            editor=self.editor,
+        )
+        logic.return_to_vae_after_pre_review_revision(revision=self.revision)
+        self.article.refresh_from_db()
+        self.assertEqual(
+            self.article.stage,
+            submission_models.STAGE_UNDER_REVISION,
+        )
+
     def test_article_not_under_revision_is_left_alone(self):
         self.article.stage = submission_models.STAGE_UNDER_REVIEW
         self.article.save()
