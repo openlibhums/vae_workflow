@@ -245,6 +245,42 @@ def confirmed_claim(article):
     return article.vae_claims.filter(status='confirmed').first()
 
 
+def return_to_vae_after_pre_review_revision(revision, request=None, **kwargs):
+    """
+    Event handler for ON_REVISIONS_COMPLETE.
+
+    "Request Pre-Review Revision" uses core's revision request, which moves
+    the article to Under Revision. When the author submits, put the article
+    back in the VAE stage it left, as long as the VAE stage was the last
+    workflow element it entered and no VAE has claimed it since.
+    """
+    from core.models import WorkflowLog
+    from submission.models import STAGE_UNDER_REVISION
+    from plugins.vae_workflow import plugin_settings
+
+    article = revision.article
+    if article.stage != STAGE_UNDER_REVISION or confirmed_claim(article):
+        return
+
+    last_log = WorkflowLog.objects.filter(
+        article=article,
+    ).select_related('element').order_by('timestamp', 'pk').last()
+    if not last_log or last_log.element.stage != plugin_settings.STAGE:
+        return
+
+    article.stage = plugin_settings.STAGE
+    article.save()
+
+    utils_models.LogEntry.add_entry(
+        types='VAE Workflow',
+        description='Returned to the VAE workflow after a pre-review revision.',
+        level='Info',
+        actor=request.user if request else None,
+        request=request,
+        target=article,
+    )
+
+
 def create_pool_availability(article, **kwargs):
     """
     Event handler for ON_ARTICLE_SUBMITTED.
