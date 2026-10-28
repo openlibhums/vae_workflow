@@ -8,9 +8,9 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('journal', '0068_issue_cached_display_title_a11y_and_more'),
+        ('journal', '0001_initial'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('submission', '0089_merge_20260226_1524'),
+        ('submission', '0001_initial'),
         ('vae_workflow', '0002_articlepoolavailability'),
     ]
 

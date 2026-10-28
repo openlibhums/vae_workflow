@@ -5,7 +5,7 @@ from utils.install import update_settings
 PLUGIN_NAME = 'VAE Workflow'
 DESCRIPTION = 'Volunteer Associate Editor self-claiming workflow.'
 AUTHOR = 'Open Library of Humanities'
-VERSION = '0.1'
+VERSION = '0.1.1'
 SHORT_NAME = 'vae_workflow'
 DISPLAY_NAME = 'VAE Workflow'
 MANAGER_URL = 'vae_manager'
