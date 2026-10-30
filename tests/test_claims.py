@@ -6,7 +6,7 @@ from django.test import TestCase, override_settings
 from django.urls import clear_url_caches, reverse
 
 from utils.testing import helpers
-from plugins.vae_workflow import forms, models
+from plugins.vae_workflow import forms, logic, models
 from plugins.vae_workflow import plugin_settings as vae_plugin_settings
 
 
@@ -308,3 +308,126 @@ class TestConfirmClaimMovesToReview(TestCase):
         kwargs = mock_raise_event.call_args.kwargs
         self.assertEqual(kwargs.get("handshake_url"), "vae_articles")
         self.assertTrue(kwargs.get("switch_stage"))
+
+    @mock.patch("events.logic.Events.raise_event")
+    @mock.patch("plugins.vae_workflow.logic.notify_confirmed")
+    @mock.patch("plugins.vae_workflow.logic._send_email")
+    def test_confirm_creates_first_review_round(
+        self, mock_send, mock_notify, mock_raise_event,
+    ):
+        from django.http import HttpResponseRedirect
+        from review.models import ReviewRound
+        mock_raise_event.return_value = HttpResponseRedirect("/")
+
+        article = helpers.create_article(
+            self.journal_one,
+            title="Confirm Round Article",
+            stage=vae_plugin_settings.STAGE,
+        )
+        models.ArticlePoolAvailability.objects.create(
+            article=article,
+            available=True,
+        )
+        claim = models.EditorClaim.objects.create(
+            article=article,
+            claimed_by=self.vae_user,
+            status="pending",
+        )
+        self.client.force_login(self.editor)
+        self.client.post(
+            reverse("vae_article", kwargs={"article_id": article.pk}),
+            data={"action": "confirm", "claim_id": claim.pk},
+            SERVER_NAME=self.journal_one.domain,
+        )
+        self.assertEqual(
+            ReviewRound.latest_article_round(article).round_number,
+            1,
+        )
+
+    @mock.patch("events.logic.Events.raise_event")
+    def test_advance_creates_first_review_round(self, mock_raise_event):
+        from django.http import HttpResponseRedirect
+        from review.models import ReviewRound
+        mock_raise_event.return_value = HttpResponseRedirect("/")
+
+        article = helpers.create_article(
+            self.journal_one,
+            title="Advance Round Article",
+            stage=vae_plugin_settings.STAGE,
+        )
+        models.EditorClaim.objects.create(
+            article=article,
+            claimed_by=self.vae_user,
+            status="confirmed",
+        )
+        self.client.force_login(self.editor)
+        self.client.post(
+            reverse("vae_article", kwargs={"article_id": article.pk}),
+            data={"action": "advance"},
+            SERVER_NAME=self.journal_one.domain,
+        )
+        mock_raise_event.assert_called_once()
+        self.assertEqual(
+            ReviewRound.latest_article_round(article).round_number,
+            1,
+        )
+
+    def test_ensure_review_round_does_not_duplicate(self):
+        from review.models import ReviewRound
+
+        article = helpers.create_article(
+            self.journal_one,
+            title="Existing Round Article",
+            stage=vae_plugin_settings.STAGE,
+        )
+        ReviewRound.objects.create(article=article, round_number=1)
+        logic.ensure_review_round(article)
+        self.assertEqual(
+            ReviewRound.objects.filter(article=article).count(),
+            1,
+        )
+
+    def test_request_revision_creates_round_and_redirects(self):
+        from review.models import ReviewRound
+
+        article = helpers.create_article(
+            self.journal_one,
+            title="Pre-Review Revision Article",
+            stage=vae_plugin_settings.STAGE,
+        )
+        self.client.force_login(self.editor)
+        response = self.client.post(
+            reverse("vae_article", kwargs={"article_id": article.pk}),
+            data={"action": "request_revision"},
+            SERVER_NAME=self.journal_one.domain,
+        )
+        self.assertRedirects(
+            response,
+            reverse(
+                "review_request_revisions",
+                kwargs={"article_id": article.pk},
+            ),
+            fetch_redirect_response=False,
+        )
+        self.assertEqual(
+            ReviewRound.latest_article_round(article).round_number,
+            1,
+        )
+
+    def test_request_revision_ignored_for_pool_member(self):
+        from review.models import ReviewRound
+
+        article = helpers.create_article(
+            self.journal_one,
+            title="Pool Member Revision Article",
+            stage=vae_plugin_settings.STAGE,
+        )
+        self.client.force_login(self.vae_user)
+        self.client.post(
+            reverse("vae_article", kwargs={"article_id": article.pk}),
+            data={"action": "request_revision"},
+            SERVER_NAME=self.journal_one.domain,
+        )
+        self.assertFalse(
+            ReviewRound.objects.filter(article=article).exists(),
+        )

@@ -41,9 +41,12 @@
       <a href="{% url 'review_decision' article.pk 'decline' %}" class="button alert expanded">
         <span class="fa fa-times-circle" aria-hidden="true"></span> {% trans "Reject Article" %}
       </a>
-      <a href="{% url 'review_request_revisions' article.pk %}" class="button warning expanded">
-        <span class="fa fa-pencil" aria-hidden="true"></span> {% trans "Request Pre-Review Revision" %}
-      </a>
+      <form method="POST">
+        {% csrf_token %}
+        <button class="button warning expanded" name="action" value="request_revision">
+          <span class="fa fa-pencil" aria-hidden="true"></span> {% trans "Request Pre-Review Revision" %}
+        </button>
+      </form>
     </div>
   </div>
 </div>

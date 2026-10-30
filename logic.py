@@ -151,10 +151,25 @@ def rescind_confirmed_claim(claim, rescinded_by):
     ).delete()
 
 
+def ensure_review_round(article):
+    """
+    Create the first review round, as core's move_to_review does, so
+    review views that look up the latest round do not fail.
+    """
+    from review.models import ReviewRound
+
+    review_round, _ = ReviewRound.objects.get_or_create(
+        article=article,
+        round_number=1,
+    )
+    return review_round
+
+
 def confirm_claim(claim, confirmed_by):
     """
     Confirm a claim: reject all other pending claims for the same article,
-    assign the VAE as section editor, and return the claim.
+    assign the VAE as section editor, create the first review round and
+    return the claim.
     """
     from review.models import EditorAssignment
 
@@ -177,6 +192,7 @@ def confirm_claim(claim, confirmed_by):
         editor=claim.claimed_by,
         defaults={'editor_type': 'section-editor'},
     )
+    ensure_review_round(article)
 
     return claim
 
@@ -227,6 +243,48 @@ def notify_vaes_pool(request, article):
 def confirmed_claim(article):
     """Return the confirmed claim for an article, if one exists."""
     return article.vae_claims.filter(status='confirmed').first()
+
+
+def return_to_vae_after_pre_review_revision(revision, request=None, **kwargs):
+    """
+    Event handler for ON_REVISIONS_COMPLETE.
+
+    "Request Pre-Review Revision" uses core's revision request, which moves
+    the article to Under Revision. When the author submits, put the article
+    back in the VAE stage it left, as long as the VAE stage was the last
+    workflow element it entered, no VAE has claimed it since and it has
+    no review assignments.
+    """
+    from core.models import WorkflowLog
+    from submission.models import STAGE_UNDER_REVISION
+    from plugins.vae_workflow import plugin_settings
+
+    article = revision.article
+    if article.stage != STAGE_UNDER_REVISION or confirmed_claim(article):
+        return
+
+    # Articles taken into review through core's review screens have
+    # reviewers but no VAE claim or review workflow log entry.
+    if article.reviewassignment_set.exists():
+        return
+
+    last_log = WorkflowLog.objects.filter(
+        article=article,
+    ).select_related('element').order_by('timestamp', 'pk').last()
+    if not last_log or last_log.element.stage != plugin_settings.STAGE:
+        return
+
+    article.stage = plugin_settings.STAGE
+    article.save()
+
+    utils_models.LogEntry.add_entry(
+        types='VAE Workflow',
+        description='Returned to the VAE workflow after a pre-review revision.',
+        level='Info',
+        actor=request.user if request else None,
+        request=request,
+        target=article,
+    )
 
 
 def create_pool_availability(article, **kwargs):

@@ -54,3 +54,7 @@ def register_for_events():
         event_logic.Events.ON_ARTICLE_SUBMITTED,
         logic.create_pool_availability,
     )
+    event_logic.Events.register_for_event(
+        event_logic.Events.ON_REVISIONS_COMPLETE,
+        logic.return_to_vae_after_pre_review_revision,
+    )

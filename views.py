@@ -287,6 +287,7 @@ def article(request, article_id):
         action = request.POST.get('action')
 
         if action == 'advance' and existing_claim and in_claiming_stage:
+            logic.ensure_review_round(article_obj)
             messages.success(
                 request,
                 'Article advancing to next stage with {} as handling editor.'.format(
@@ -372,6 +373,15 @@ def article(request, article_id):
             except models.EditorClaim.DoesNotExist:
                 messages.error(request, 'Claim not found.')
                 return redirect(reverse('vae_article', kwargs={'article_id': article_id}))
+
+        elif action == 'request_revision' and is_editor:
+            logic.ensure_review_round(article_obj)
+            return redirect(
+                reverse(
+                    'review_request_revisions',
+                    kwargs={'article_id': article_obj.pk},
+                )
+            )
 
         elif action == 'notify_vaes' and in_claiming_stage:
             logic.notify_vaes_pool(request, article_obj)
