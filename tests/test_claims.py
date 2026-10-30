@@ -386,3 +386,48 @@ class TestConfirmClaimMovesToReview(TestCase):
             ReviewRound.objects.filter(article=article).count(),
             1,
         )
+
+    def test_request_revision_creates_round_and_redirects(self):
+        from review.models import ReviewRound
+
+        article = helpers.create_article(
+            self.journal_one,
+            title="Pre-Review Revision Article",
+            stage=vae_plugin_settings.STAGE,
+        )
+        self.client.force_login(self.editor)
+        response = self.client.post(
+            reverse("vae_article", kwargs={"article_id": article.pk}),
+            data={"action": "request_revision"},
+            SERVER_NAME=self.journal_one.domain,
+        )
+        self.assertRedirects(
+            response,
+            reverse(
+                "review_request_revisions",
+                kwargs={"article_id": article.pk},
+            ),
+            fetch_redirect_response=False,
+        )
+        self.assertEqual(
+            ReviewRound.latest_article_round(article).round_number,
+            1,
+        )
+
+    def test_request_revision_ignored_for_pool_member(self):
+        from review.models import ReviewRound
+
+        article = helpers.create_article(
+            self.journal_one,
+            title="Pool Member Revision Article",
+            stage=vae_plugin_settings.STAGE,
+        )
+        self.client.force_login(self.vae_user)
+        self.client.post(
+            reverse("vae_article", kwargs={"article_id": article.pk}),
+            data={"action": "request_revision"},
+            SERVER_NAME=self.journal_one.domain,
+        )
+        self.assertFalse(
+            ReviewRound.objects.filter(article=article).exists(),
+        )
